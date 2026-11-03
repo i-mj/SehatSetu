@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="srvBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#042f2e" />
+      <stop offset="50%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#115e59" />
+    </linearGradient>
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#srvBg)" />
+
+  <!-- Medical cross & pulse background line -->
+  <path d="M50,315 L400,315 L440,240 L480,390 L520,290 L560,330 L600,315 L1150,315" stroke="#2dd4bf" stroke-opacity="0.12" stroke-width="3" fill="none" />
+  <circle cx="1060" cy="180" r="140" stroke="#ffffff" stroke-opacity="0.06" stroke-width="2" />
+
+  <!-- Brand Pill -->
+  <g transform="translate(80, 80)">
+    <rect width="360" height="46" rx="23" fill="#ffffff" fill-opacity="0.18" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.5" />
+    <circle cx="28" cy="23" r="10" fill="#2dd4bf" />
+    <text x="48" y="29" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="700" fill="#ffffff" letter-spacing="0.5">
+      CLINICAL SERVICES & PROCEDURES
+    </text>
+  </g>
+
+  <!-- Headline -->
+  <text x="80" y="210" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#ffffff" letter-spacing="-1">
+    Hospital-Grade Home Nursing
+  </text>
+  <text x="80" y="275" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#5eead4" letter-spacing="-1">
+    Tailored for Patient Comfort
+  </text>
+
+  <!-- Subtitle -->
+  <text x="80" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="400" fill="#ccfbf1">
+    Elderly care companionship, surgical wound recovery, sterile IV infusions,
+  </text>
+  <text x="80" y="372" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="400" fill="#ccfbf1">
+    catheter care, and 24/7 bedside patient attendant support across major coverage zones.
+  </text>
+
+  <!-- Services Grid Badges -->
+  <g transform="translate(80, 430)">
+    <!-- Service 1 -->
+    <rect x="0" y="0" width="320" height="120" rx="16" fill="url(#cardBg)" stroke="#5eead4" stroke-opacity="0.25" stroke-width="1.5" />
+    <circle cx="45" cy="45" r="20" fill="#ffffff" fill-opacity="0.15" />
+    <text x="45" y="52" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#5eead4">♥</text>
+    <text x="80" y="45" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Elderly Care</text>
+    <text x="80" y="70" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#ccfbf1">12h / 24h compassionate shifts</text>
+
+    <!-- Service 2 -->
+    <rect x="350" y="0" width="320" height="120" rx="16" fill="url(#cardBg)" stroke="#5eead4" stroke-opacity="0.25" stroke-width="1.5" />
+    <circle cx="395" cy="45" r="20" fill="#ffffff" fill-opacity="0.15" />
+    <text x="395" y="52" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#5eead4">✚</text>
+    <text x="430" y="45" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Post-Surgery Care</text>
+    <text x="430" y="70" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#ccfbf1">Sterile wound dressing & drains</text>
+
+    <!-- Service 3 -->
+    <rect x="700" y="0" width="340" height="120" rx="16" fill="url(#cardBg)" stroke="#5eead4" stroke-opacity="0.25" stroke-width="1.5" />
+    <circle cx="745" cy="45" r="20" fill="#ffffff" fill-opacity="0.15" />
+    <text x="745" y="52" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#5eead4">💉</text>
+    <text x="780" y="45" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Injections & IV Therapy</text>
+    <text x="780" y="70" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#ccfbf1">Certified single-visit procedures</text>
+  </g>
+</svg>

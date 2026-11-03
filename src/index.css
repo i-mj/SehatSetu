@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #102d4b;
+  --color-navy-dark: #0b1f33;
+  --color-teal: #079b9a;
+  --color-teal2: #087e83;
+  --color-teal-dark: #087e83;
+  --color-ink: #18324b;
+  --color-muted: #647789;
+  --color-pale: #eaf7f7;
+  --color-line: #e3ebef;
+
+  /* Primary color mapping to exact attached HTML theme */
+  --color-primary: #079b9a;
+  --color-primary-dark: #087e83;
+  --color-primary-light: #eaf7f7;
+  --color-primary-hover: #087e83;
+}
+
+:root {
+  --navy: #102d4b;
+  --teal: #079b9a;
+  --teal2: #087e83;
+  --ink: #18324b;
+  --muted: #647789;
+  --pale: #eaf7f7;
+  --line: #e3ebef;
+  --white: #fff;
+  --shadow: 0 18px 50px #18324b12;
+}
+
+@layer base {
+  body {
+    background-color: #f7fafb;
+    color: #18324b;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* Custom theme components inspired by attached template */
+.eyebrow-theme {
+  color: #087e83;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.btn-theme {
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 20px;
+  background-color: #079b9a;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 6px 15px rgba(7, 155, 154, 0.22);
+  transition: all 0.18s ease;
+}
+
+.btn-theme:hover {
+  background-color: #087e83;
+}
+
+.btn-theme-outline {
+  background-color: #ffffff;
+  color: #102d4b;
+  border: 1px solid #cbd9df;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-weight: 700;
+  transition: all 0.18s ease;
+}
+
+.btn-theme-outline:hover {
+  background-color: #f0f6f8;
+  border-color: #b2c8d2;
+}
+
+/* Subtle WhatsApp pulse animation */
+@keyframes whatsapp-breathe {
+  0%, 100% {
+    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.55), 0 0 0 6px rgba(37, 211, 102, 0.16);
+  }
+}
+
+@keyframes whatsapp-ripple {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.5;
+  }
+  60% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+}
+
+.whatsapp-pulse-btn {
+  animation: whatsapp-breathe 2.8s ease-in-out infinite;
+}
+
+.whatsapp-pulse-btn:hover {
+  animation-play-state: paused;
+}
+
+.whatsapp-pulse-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background-color: #25D366;
+  animation: whatsapp-ripple 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whatsapp-pulse-btn,
+  .whatsapp-pulse-ripple {
+    animation: none !important;
+  }
+}

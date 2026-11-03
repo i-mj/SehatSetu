@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="cntBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="60%" stop-color="#0f8672" />
+      <stop offset="100%" stop-color="#134e4a" />
+    </linearGradient>
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#cntBg)" />
+
+  <!-- Communication rings -->
+  <circle cx="1060" cy="220" r="180" stroke="#5eead4" stroke-opacity="0.1" stroke-width="2" />
+  <circle cx="1060" cy="220" r="120" stroke="#5eead4" stroke-opacity="0.15" stroke-width="2" />
+  <circle cx="1060" cy="220" r="60" stroke="#5eead4" stroke-opacity="0.25" stroke-width="2" />
+
+  <!-- Brand Pill -->
+  <g transform="translate(80, 80)">
+    <rect width="320" height="46" rx="23" fill="#ffffff" fill-opacity="0.18" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.5" />
+    <circle cx="28" cy="23" r="10" fill="#2dd4bf" />
+    <text x="48" y="29" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="700" fill="#ffffff" letter-spacing="0.5">
+      24/7 CLINICAL HELPLINE & INTAKE
+    </text>
+  </g>
+
+  <!-- Headline -->
+  <text x="80" y="210" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#ffffff" letter-spacing="-1">
+    Connect with On-Duty
+  </text>
+  <text x="80" y="275" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#5eead4" letter-spacing="-1">
+    Healthcare Coordinators
+  </text>
+
+  <!-- Subtitle -->
+  <text x="80" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="400" fill="#ccfbf1">
+    Speak with our nursing supervisors for instant triage, physician prescription reviews,
+  </text>
+  <text x="80" y="372" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="400" fill="#ccfbf1">
+    and rapid home nurse dispatch across all certified coverage zones.
+  </text>
+
+  <!-- Contact Channels Badges -->
+  <g transform="translate(80, 430)">
+    <!-- Channel 1: Phone -->
+    <rect x="0" y="0" width="320" height="120" rx="16" fill="url(#cardBg)" stroke="#5eead4" stroke-opacity="0.25" stroke-width="1.5" />
+    <text x="25" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" fill="#5eead4">DIRECT TELEPHONE</text>
+    <text x="25" y="68" font-family="system-ui, -apple-system, sans-serif" font-size="19" font-weight="700" fill="#ffffff">+91 98765 43210</text>
+    <text x="25" y="94" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#ccfbf1">Immediate clinical intake</text>
+
+    <!-- Channel 2: WhatsApp -->
+    <rect x="350" y="0" width="320" height="120" rx="16" fill="url(#cardBg)" stroke="#25D366" stroke-opacity="0.4" stroke-width="1.5" />
+    <text x="375" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" fill="#25D366">WHATSAPP DIRECT</text>
+    <text x="375" y="68" font-family="system-ui, -apple-system, sans-serif" font-size="19" font-weight="700" fill="#ffffff">Instant Messaging</text>
+    <text x="375" y="94" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#ccfbf1">Prescription uploads & chats</text>
+
+    <!-- Channel 3: Online Form -->
+    <rect x="700" y="0" width="340" height="120" rx="16" fill="url(#cardBg)" stroke="#5eead4" stroke-opacity="0.25" stroke-width="1.5" />
+    <text x="725" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" fill="#5eead4">DIRECT MESSAGE</text>
+    <text x="725" y="68" font-family="system-ui, -apple-system, sans-serif" font-size="19" font-weight="700" fill="#ffffff">Online Contact Desk</text>
+    <text x="725" y="94" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#ccfbf1">Average response &lt; 2 hours</text>
+  </g>
+</svg>

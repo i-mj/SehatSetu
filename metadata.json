@@ -1,0 +1,6 @@
+{
+  "name": "Nurse Care - Trained Nurses for Care at Home",
+  "description": "Professional home nursing care services including elderly care, post-surgery recovery, wound dressing, IV therapy, and compassionate attendant care.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

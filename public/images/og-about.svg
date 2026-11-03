@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="aboutBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="50%" stop-color="#0f8672" />
+      <stop offset="100%" stop-color="#022c22" />
+    </linearGradient>
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.04" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#aboutBg)" />
+
+  <!-- Shield decorative background art -->
+  <path d="M1020,100 L1140,160 L1140,320 C1140,430 1020,500 1020,500 C1020,500 900,430 900,320 L900,160 Z" fill="#ffffff" fill-opacity="0.04" stroke="#5eead4" stroke-opacity="0.2" stroke-width="2" />
+  <circle cx="1020" cy="280" r="60" stroke="#5eead4" stroke-opacity="0.3" stroke-width="3" />
+  <path d="M1000,280 L1015,295 L1045,265" stroke="#5eead4" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Brand Pill -->
+  <g transform="translate(80, 80)">
+    <rect width="330" height="46" rx="23" fill="#ffffff" fill-opacity="0.18" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.5" />
+    <circle cx="28" cy="23" r="10" fill="#2dd4bf" />
+    <text x="48" y="29" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="700" fill="#ffffff" letter-spacing="0.5">
+      ABOUT NURSE CARE CLINICAL
+    </text>
+  </g>
+
+  <!-- Headline -->
+  <text x="80" y="210" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#ffffff" letter-spacing="-1">
+    Rigorous Nurse Screening &
+  </text>
+  <text x="80" y="275" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="#5eead4" letter-spacing="-1">
+    Clinical Governance Standards
+  </text>
+
+  <!-- Subtitle -->
+  <text x="80" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="400" fill="#ccfbf1">
+    State Nursing Council credential audits, 4-tier background verification,
+  </text>
+  <text x="80" y="372" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="400" fill="#ccfbf1">
+    and aseptic bedside simulation testing before any nurse enters your family home.
+  </text>
+
+  <!-- 4 Step Screening Protocol Highlights -->
+  <g transform="translate(80, 430)">
+    <!-- Card 1 -->
+    <rect x="0" y="0" width="240" height="120" rx="16" fill="url(#cardBg)" stroke="#5eead4" stroke-opacity="0.25" stroke-width="1.5" />
+    <text x="20" y="35" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" fill="#5eead4">TIER 01</text>
+    <text x="20" y="65" font-family="system-ui, -apple-system, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Council Diploma</text>
+    <text x="20" y="90" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#ccfbf1">State council verification</text>
+
+    <!-- Card 2 -->
+    <rect x="260" y="0" width="240" height="120" rx="16" fill="url(#cardBg)" stroke="#5eead4" stroke-opacity="0.25" stroke-width="1.5" />
+    <text x="280" y="35" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" fill="#5eead4">TIER 02</text>
+    <text x="280" y="65" font-family="system-ui, -apple-system, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Skills Simulation</text>
+    <text x="280" y="90" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#ccfbf1">Sterile technique exams</text>
+
+    <!-- Card 3 -->
+    <rect x="520" y="0" width="240" height="120" rx="16" fill="url(#cardBg)" stroke="#5eead4" stroke-opacity="0.25" stroke-width="1.5" />
+    <text x="540" y="35" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" fill="#5eead4">TIER 03</text>
+    <text x="540" y="65" font-family="system-ui, -apple-system, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Police Clearance</text>
+    <text x="540" y="90" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#ccfbf1">Identity & address checks</text>
+
+    <!-- Card 4 -->
+    <rect x="780" y="0" width="240" height="120" rx="16" fill="url(#cardBg)" stroke="#5eead4" stroke-opacity="0.25" stroke-width="1.5" />
+    <text x="800" y="35" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" fill="#5eead4">TIER 04</text>
+    <text x="800" y="65" font-family="system-ui, -apple-system, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Bedside Ethics</text>
+    <text x="800" y="90" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="400" fill="#ccfbf1">Dignity & gentleness</text>
+  </g>
+</svg>
