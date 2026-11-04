@@ -576,7 +576,7 @@ export const ServicesPage: React.FC = () => {
                       to="/enquiry"
                       className="text-[#0f8672] font-semibold hover:underline"
                     >
-                      Quick Enquiry →
+                      Enquiry Now →
                     </Link>
                   </div>
                 </div>

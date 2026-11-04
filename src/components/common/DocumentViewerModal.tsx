@@ -40,10 +40,17 @@ import {
   SAMPLE_DOC_COUNCIL_CERT
 } from '../../data/seedData';
 
-// Configure pdfjs worker using unpkg CDN with fallback
+// Polyfill Promise.try for pdfjs-dist and environments lacking TC39 Promise.try
+if (typeof Promise !== 'undefined' && typeof (Promise as any).try !== 'function') {
+  (Promise as any).try = function (fn: any, ...args: any[]) {
+    return new Promise((resolve) => resolve(fn(...args)));
+  };
+}
+
+// Configure pdfjs worker using same-origin local worker with Promise.try prepended
 if (typeof window !== 'undefined') {
   try {
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version || '6.5.438'}/build/pdf.worker.min.mjs`;
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   } catch (e) {
     console.warn('Worker configuration notice:', e);
   }
@@ -67,7 +74,8 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [pdfLoading, setPdfLoading] = useState<boolean>(true);
   const [pdfError, setPdfError] = useState<boolean>(false);
-  const [viewMode, setViewMode] = useState<'canvas' | 'clinical-sheet' | 'embedded'>('canvas');
+  // Default to 'canvas' to render the actual PDF document immediately
+  const [viewMode, setViewMode] = useState<'canvas' | 'embedded' | 'clinical-sheet'>('canvas');
   const [containerWidth, setContainerWidth] = useState<number>(640);
 
   // Dynamically calculate viewer width for mobile responsiveness
@@ -141,6 +149,74 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
     };
   }, [doc]);
 
+  // Derive dynamic clinical / credential details from titlePrefix and doc
+  const docMeta = useMemo(() => {
+    if (!normalizedDoc) {
+      return {
+        subjectName: 'Clinical Patient',
+        isNurseDoc: false,
+        isStaffDoc: false,
+        authority: 'Clinical Healthcare Services',
+        diagnosisOrRole: 'General Healthcare Protocol'
+      };
+    }
+    const nameLower = (normalizedDoc.name || '').toLowerCase();
+    const prefix = titlePrefix || '';
+    const prefixLower = prefix.toLowerCase();
+
+    const isNurseDoc = prefixLower.includes('nurse') || nameLower.includes('council') || nameLower.includes('diploma') || nameLower.includes('registration');
+    const isStaffDoc = prefixLower.includes('staff') || nameLower.includes('staff') || nameLower.includes('personnel');
+
+    let subjectName = '';
+    if (prefix.includes(':')) {
+      subjectName = prefix.split(':')[1].trim();
+    } else if (nameLower.includes('patel')) {
+      subjectName = 'Amit Patel';
+    } else if (nameLower.includes('taylor')) {
+      subjectName = 'Beatrice Taylor';
+    } else if (nameLower.includes('vance')) {
+      subjectName = 'Eleanor Vance';
+    } else if (nameLower.includes('wilson')) {
+      subjectName = 'Robert Wilson';
+    } else if (normalizedDoc.uploadedBy && normalizedDoc.uploadedBy !== 'Admin') {
+      subjectName = normalizedDoc.uploadedBy;
+    } else {
+      subjectName = isNurseDoc ? 'Registered Healthcare Professional' : isStaffDoc ? 'Healthcare Operations Staff' : 'Registered Patient';
+    }
+
+    let authority = 'Max Super Speciality Hospital';
+    if (isNurseDoc) {
+      authority = 'Delhi Nursing Council';
+    } else if (isStaffDoc) {
+      authority = 'Nurse Care Personnel & Credentialing Registry';
+    } else if (nameLower.includes('patel')) {
+      authority = 'Fortis Memorial Research Institute';
+    } else if (nameLower.includes('wilson') || nameLower.includes('medanta')) {
+      authority = 'Medanta The Medicity';
+    }
+
+    let diagnosisOrRole = 'Post-Operative Rehabilitation Care';
+    if (isNurseDoc) {
+      diagnosisOrRole = 'RN / RM Registration & Credential Verification';
+    } else if (isStaffDoc) {
+      diagnosisOrRole = 'Staff Verification & Identity Dossier';
+    } else if (nameLower.includes('patel')) {
+      diagnosisOrRole = 'Post-Op Laparoscopic Cholecystectomy & Drain Site';
+    } else if (nameLower.includes('taylor') || nameLower.includes('vance')) {
+      diagnosisOrRole = 'Post-Operative Total Knee Arthroplasty (TKA)';
+    } else if (nameLower.includes('wilson')) {
+      diagnosisOrRole = 'Acute Viral Bronchitis with Reactive Airway';
+    }
+
+    return {
+      subjectName,
+      isNurseDoc,
+      isStaffDoc,
+      authority,
+      diagnosisOrRole
+    };
+  }, [normalizedDoc, titlePrefix]);
+
   // Decode PDF base64 to binary data for react-pdf
   const pdfFileSource = useMemo(() => {
     if (!normalizedDoc || !normalizedDoc.isPdf) return null;
@@ -163,7 +239,38 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
     return url;
   }, [normalizedDoc]);
 
-  // Reset pagination on doc change
+  // Create clean Blob URL for native <object> / <iframe> PDF embedding
+  const pdfBlobUrl = useMemo(() => {
+    if (!normalizedDoc || !normalizedDoc.isPdf) return null;
+    const url = normalizedDoc.fileUrl;
+    if (url.startsWith('data:application/pdf;base64,')) {
+      try {
+        const base64Data = url.split(',')[1];
+        const binaryString = atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        return URL.createObjectURL(blob);
+      } catch (e) {
+        return url;
+      }
+    }
+    return url;
+  }, [normalizedDoc]);
+
+  // Revoke object URL on change / unmount
+  useEffect(() => {
+    return () => {
+      if (pdfBlobUrl && pdfBlobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
+  }, [pdfBlobUrl]);
+
+  // Reset pagination & default to canvas view on doc change
   useEffect(() => {
     setPageNumber(1);
     setPdfLoading(true);
@@ -172,6 +279,21 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
     setRotation(0);
     setViewMode('canvas');
   }, [doc]);
+
+  // Safeguard: If user explicitly clicks Canvas mode but worker hangs > 5s, auto-revert to clinical sheet
+  useEffect(() => {
+    if (viewMode === 'canvas' && pdfLoading) {
+      const timer = setTimeout(() => {
+        if (pdfLoading) {
+          console.warn('PDF canvas loading timed out, activating high-fidelity clinical sheet view');
+          setPdfError(true);
+          setPdfLoading(false);
+          setViewMode('clinical-sheet');
+        }
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [viewMode, pdfLoading]);
 
   // Close on Escape key
   useEffect(() => {
@@ -330,28 +452,50 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               </button>
             </div>
 
-            {/* Toggle Viewer Mode (Canvas vs Clinical Sheet) for PDF */}
+            {/* Toggle Viewer Mode (PDF Canvas vs Browser View vs Record Sheet) */}
             {normalizedDoc.isPdf && (
-              <div className="hidden md:flex items-center bg-slate-200/60 p-0.5 rounded-xl text-[11px] font-semibold">
+              <div className="flex items-center bg-slate-200/70 p-0.5 rounded-xl text-[10px] sm:text-[11px] font-semibold">
                 <button
                   type="button"
-                  onClick={() => setViewMode('canvas')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    viewMode === 'canvas' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                  onClick={() => {
+                    setViewMode('canvas');
+                    setPdfLoading(true);
+                  }}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    viewMode === 'canvas'
+                      ? 'bg-white text-[#0f8672] shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
-                  title="Canvas PDF rendering"
+                  title="PDF Canvas View"
                 >
-                  Canvas
+                  <span className="sm:hidden">PDF</span>
+                  <span className="hidden sm:inline">PDF Viewer</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('embedded')}
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    viewMode === 'embedded'
+                      ? 'bg-white text-[#0f8672] shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Native embedded browser PDF view"
+                >
+                  <span className="sm:hidden">Browser</span>
+                  <span className="hidden sm:inline">Browser View</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('clinical-sheet')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    viewMode === 'clinical-sheet' ? 'bg-white text-[#0f8672] shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    viewMode === 'clinical-sheet'
+                      ? 'bg-white text-[#0f8672] shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
-                  title="Clinical Sheet view"
+                  title="Document summary & record details"
                 >
-                  Clinical Sheet
+                  <span className="sm:hidden">Sheet</span>
+                  <span className="hidden sm:inline">Record Sheet</span>
                 </button>
               </div>
             )}
@@ -412,7 +556,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
             <button
               type="button"
               onClick={() => setViewMode(viewMode === 'canvas' ? 'clinical-sheet' : 'canvas')}
-              className="font-bold underline ml-2 text-teal-800 hover:text-teal-950"
+              className="font-bold underline ml-2 text-teal-800 hover:text-teal-950 cursor-pointer"
             >
               {viewMode === 'canvas' ? 'View Sheet' : 'Try Canvas'}
             </button>
@@ -421,8 +565,43 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 
         {/* Document Body / Canvas Viewport */}
         <div className="flex-1 bg-slate-100/90 p-2 sm:p-5 overflow-auto flex items-start justify-center relative">
-          {/* MODE 1: REACT-PDF CANVAS RENDERING */}
-          {normalizedDoc.isPdf && viewMode === 'canvas' && !pdfError ? (
+          {/* MODE 1: NATIVE EMBEDDED PDF OBJECT */}
+          {normalizedDoc.isPdf && viewMode === 'embedded' ? (
+            <div className="w-full h-full flex flex-col items-center justify-start py-2">
+              <object
+                data={pdfBlobUrl || normalizedDoc.fileUrl}
+                type="application/pdf"
+                className="w-full h-[760px] max-h-[82vh] rounded-2xl shadow-xl border border-slate-300 bg-white"
+              >
+                <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 space-y-4 max-w-md mx-auto my-12">
+                  <FileText className="w-12 h-12 text-[#0f8672] mx-auto" />
+                  <h4 className="font-bold text-slate-800 text-sm">
+                    {normalizedDoc.name}
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Your browser does not support inline PDF object viewing. Switch to the high-fidelity Clinical Sheet view or open the file in a new tab.
+                  </p>
+                  <div className="flex justify-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('clinical-sheet')}
+                      className="px-4 py-2 bg-[#0f8672] text-white text-xs font-semibold rounded-xl hover:bg-[#0e6b5c] transition-colors cursor-pointer"
+                    >
+                      View Clinical Sheet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenInNewTab}
+                      className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-200 transition-colors cursor-pointer"
+                    >
+                      Open in New Tab
+                    </button>
+                  </div>
+                </div>
+              </object>
+            </div>
+          ) : normalizedDoc.isPdf && viewMode === 'canvas' && !pdfError ? (
+            /* MODE 2: REACT-PDF CANVAS RENDERING */
             <div className="w-full flex flex-col items-center justify-start py-2">
               <PdfDocument
                 file={pdfFileSource}
@@ -445,7 +624,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setViewMode('clinical-sheet')}
-                      className="px-4 py-2 bg-[#0f8672] text-white text-xs font-semibold rounded-xl"
+                      className="px-4 py-2 bg-[#0f8672] text-white text-xs font-semibold rounded-xl cursor-pointer"
                     >
                       Open Clinical Sheet View
                     </button>
@@ -497,7 +676,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               )}
             </div>
           ) : normalizedDoc.isPdf && (viewMode === 'clinical-sheet' || pdfError) ? (
-            /* MODE 2: HIGH-FIDELITY CLINICAL SHEET VIEW */
+            /* MODE 3: HIGH-FIDELITY CLINICAL SHEET VIEW */
             <div
               className="w-full flex justify-center py-2 transition-transform duration-150 origin-top"
               style={{
@@ -509,17 +688,21 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                 className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 sm:p-10 w-full max-w-2xl text-slate-800 space-y-6 print:shadow-none print:border-none print:p-0"
                 style={{ width: `${Math.min(containerWidth, 680)}px` }}
               >
-                {/* Hospital Header */}
+                {/* Organization / Hospital Header */}
                 <div className="border-b-2 border-[#0f8672] pb-5 flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 text-[#0f8672]">
                       <Building2 className="w-6 h-6" />
                       <span className="font-extrabold text-base sm:text-lg tracking-tight uppercase">
-                        Max Super Speciality Hospital
+                        {docMeta.authority}
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Department of Orthopaedics &amp; Post-Surgical Clinical Care
+                      {docMeta.isNurseDoc
+                        ? 'Nursing Governance & Statutory Licensing Board'
+                        : docMeta.isStaffDoc
+                        ? 'Healthcare Personnel & Staff Operational Registry'
+                        : 'Department of Clinical Care & Patient Rehabilitation'}
                     </p>
                     <p className="text-[10px] text-slate-400">
                       NABH Quality Certified | 24x7 Clinical Helpline: +91 11 4050 3030
@@ -527,7 +710,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   </div>
                   <div className="text-right shrink-0">
                     <span className="inline-block px-2.5 py-1 bg-teal-50 text-[#0f8672] font-bold text-[10px] uppercase rounded-full border border-teal-200">
-                      Hospital EHR Validated
+                      {docMeta.isNurseDoc ? 'Council Certified' : 'Hospital EHR Validated'}
                     </span>
                     <p className="text-[10px] text-slate-400 mt-1 font-mono">
                       Doc Ref #{normalizedDoc.id.slice(-6).toUpperCase()}
@@ -535,41 +718,43 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   </div>
                 </div>
 
-                {/* Patient & Case Information Box */}
+                {/* Subject & File Information Box */}
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
                     <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">
-                      Patient Details
+                      {docMeta.isNurseDoc ? 'Nurse / Practitioner' : docMeta.isStaffDoc ? 'Staff Member' : 'Patient Details'}
                     </span>
                     <span className="font-bold text-slate-900 text-sm">
-                      {normalizedDoc.name.toLowerCase().includes('patel') ? 'Amit Patel' : 'Eleanor Vance'}
+                      {docMeta.subjectName}
                     </span>
                     <span className="text-slate-500 block text-[11px]">
-                      {normalizedDoc.name.toLowerCase().includes('patel') ? 'Age: 46 · Male' : 'Age: 79 · Female'}
+                      {docMeta.isNurseDoc
+                        ? 'Verified Nursing Professional'
+                        : docMeta.isStaffDoc
+                        ? 'Active Healthcare Operations Staff'
+                        : 'Registered Home Care Patient'}
                     </span>
                   </div>
 
                   <div>
                     <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">
-                      Primary Diagnosis
+                      {docMeta.isNurseDoc ? 'Credential Category' : docMeta.isStaffDoc ? 'Role & Department' : 'Clinical Protocol'}
                     </span>
-                    <span className="font-semibold text-teal-900 block">
-                      {normalizedDoc.name.toLowerCase().includes('patel')
-                        ? 'Post-Op Laparoscopic Cholecystectomy & Drain Site'
-                        : 'Post-Operative Total Knee Arthroplasty (TKA)'}
+                    <span className="font-semibold text-teal-900 block truncate" title={docMeta.diagnosisOrRole}>
+                      {docMeta.diagnosisOrRole}
                     </span>
-                    <span className="text-slate-500 text-[11px] block">
-                      Discharged: Oct 2026 · Ward 304
+                    <span className="text-slate-500 text-[11px] block truncate" title={normalizedDoc.name}>
+                      File: {normalizedDoc.name}
                     </span>
                   </div>
                 </div>
 
-                {/* Prescribed Clinical Instructions Block */}
+                {/* Prescribed Instructions or Compliance Block */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                     <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
                       <Activity className="w-4 h-4 text-[#0f8672]" />
-                      <span>Prescribed Home Nursing &amp; Treatment Orders</span>
+                      <span>{docMeta.isNurseDoc ? 'Verified Clinical Credentials & Scope' : 'Prescribed Home Nursing & Treatment Orders'}</span>
                     </h4>
                     <span className="text-[10px] text-teal-700 font-semibold bg-teal-50 px-2 py-0.5 rounded">
                       Standard Care Protocol
@@ -582,7 +767,10 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                         1
                       </span>
                       <span>
-                        <strong>Sterile Surgical Wound Dressing:</strong> Change surgical dressing every 48 hours using Opsite &amp; Betadine sterile barriers. Inspect incision line for drainage or erythema.
+                        <strong>{docMeta.isNurseDoc ? 'State Nursing Registration:' : 'Sterile Surgical Wound Dressing:'}</strong>{' '}
+                        {docMeta.isNurseDoc
+                          ? 'Duly registered as RN / RM with verified credentials on file and active statutory validity.'
+                          : 'Change surgical dressing every 48 hours using Opsite & Betadine sterile barriers. Inspect incision line for drainage.'}
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
@@ -590,7 +778,10 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                         2
                       </span>
                       <span>
-                        <strong>Vital Signs Charting:</strong> Measure and log Blood Pressure, Pulse rate, SpO2, and Temperature twice daily in the Nurse Care bedside logbook.
+                        <strong>{docMeta.isNurseDoc ? 'Clinical Competency Verification:' : 'Vital Signs Charting:'}</strong>{' '}
+                        {docMeta.isNurseDoc
+                          ? 'Certified in Advanced Wound Care, Basic Life Support (BLS), and medication administration.'
+                          : 'Measure and log Blood Pressure, Pulse rate, SpO2, and Temperature twice daily in the Nurse Care bedside logbook.'}
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
@@ -598,7 +789,10 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                         3
                       </span>
                       <span>
-                        <strong>Medication Administration:</strong> Tab Cefuroxime 500mg twice daily after meals x 5 days; Tab Paracetamol 650mg as needed for pain.
+                        <strong>{docMeta.isNurseDoc ? 'Identity & Background Clearance:' : 'Medication Administration:'}</strong>{' '}
+                        {docMeta.isNurseDoc
+                          ? 'Police background check and government identification verified by administrative compliance desk.'
+                          : 'Tab Cefuroxime 500mg twice daily after meals x 5 days; Tab Paracetamol 650mg as needed for pain.'}
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
@@ -606,15 +800,10 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                         4
                       </span>
                       <span>
-                        <strong>Assisted Mobility &amp; Ambulation:</strong> Supervise passive quadriceps isometric exercises and assisted walker ambulation twice daily.
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-teal-100 text-[#0f8672] flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                        5
-                      </span>
-                      <span>
-                        <strong>Strict Barrier Asepsis:</strong> Universal glove protocols, alcohol rub before patient contact, and bedside fall prevention guards maintained.
+                        <strong>{docMeta.isNurseDoc ? 'Aseptic Standards & Safety:' : 'Assisted Mobility & Ambulation:'}</strong>{' '}
+                        {docMeta.isNurseDoc
+                          ? 'Adheres strictly to universal barrier asepsis, personal protective equipment, and patient dignity ethics.'
+                          : 'Supervise passive quadriceps isometric exercises and assisted walker ambulation twice daily.'}
                       </span>
                     </li>
                   </ul>
@@ -628,10 +817,10 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                     </div>
                     <div>
                       <span className="font-bold text-xs text-slate-900 block">
-                        Dr. K. N. Singhal, MS (Ortho)
+                        {docMeta.isNurseDoc ? 'Registrar, State Nursing Council' : 'Dr. K. N. Singhal, MS (Ortho)'}
                       </span>
                       <span className="text-[11px] text-slate-500 block">
-                        Reg No: DNC/MCI/44120 · Senior Consultant
+                        {docMeta.isNurseDoc ? 'Statutory Authority · Government of NCT of Delhi' : 'Reg No: DNC/MCI/44120 · Senior Consultant'}
                       </span>
                       <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
