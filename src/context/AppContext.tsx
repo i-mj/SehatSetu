@@ -36,7 +36,11 @@ import {
   INITIAL_SETTINGS,
   INITIAL_ADMIN_USERS,
   INITIAL_STAFF_RECORDS,
-  INITIAL_BILLINGS
+  INITIAL_BILLINGS,
+  SAMPLE_DOC_CARE_PLAN_PDF,
+  SAMPLE_DOC_DISCHARGE_PDF,
+  SAMPLE_DOC_RX_IMAGE,
+  SAMPLE_DOC_COUNCIL_CERT
 } from '../data/seedData';
 
 export const DEFAULT_FORM_FIELDS: FormFieldConfig[] = [
@@ -314,10 +318,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  const sanitizeDoc = (doc: Document): Document => {
+    if (!doc.fileUrl || doc.fileUrl.startsWith('#mock')) {
+      const nameLower = (doc.name || '').toLowerCase();
+      if (nameLower.includes('taylor') || nameLower.includes('care_plan') || nameLower.includes('plan')) {
+        return { ...doc, fileUrl: SAMPLE_DOC_CARE_PLAN_PDF, fileType: 'pdf' };
+      }
+      if (nameLower.includes('patel') || nameLower.includes('discharge')) {
+        return { ...doc, fileUrl: SAMPLE_DOC_DISCHARGE_PDF, fileType: 'pdf' };
+      }
+      if (nameLower.includes('wilson') || nameLower.includes('rx') || nameLower.includes('pulmonologist')) {
+        return { ...doc, fileUrl: SAMPLE_DOC_RX_IMAGE, fileType: 'svg' };
+      }
+      return { ...doc, fileUrl: SAMPLE_DOC_COUNCIL_CERT, fileType: 'svg' };
+    }
+    return doc;
+  };
+
   const [enquiries, setEnquiries] = useState<Enquiry[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.ENQUIRIES);
-      return stored ? JSON.parse(stored) : INITIAL_ENQUIRIES;
+      const parsed: Enquiry[] = stored ? JSON.parse(stored) : INITIAL_ENQUIRIES;
+      return parsed.map((e) => ({
+        ...e,
+        documents: (e.documents || []).map(sanitizeDoc)
+      }));
     } catch {
       return INITIAL_ENQUIRIES;
     }
@@ -326,7 +351,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [nurses, setNurses] = useState<Nurse[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.NURSES);
-      return stored ? JSON.parse(stored) : INITIAL_NURSES;
+      const parsed: Nurse[] = stored ? JSON.parse(stored) : INITIAL_NURSES;
+      return parsed.map((n) => ({
+        ...n,
+        documents: (n.documents || []).map(sanitizeDoc)
+      }));
     } catch {
       return INITIAL_NURSES;
     }
@@ -363,7 +392,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [staffRecords, setStaffRecords] = useState<StaffRecord[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.STAFF_RECORDS);
-      return stored ? JSON.parse(stored) : INITIAL_STAFF_RECORDS;
+      const parsed: StaffRecord[] = stored ? JSON.parse(stored) : INITIAL_STAFF_RECORDS;
+      return parsed.map((s) => ({
+        ...s,
+        documents: (s.documents || []).map(sanitizeDoc)
+      }));
     } catch {
       return INITIAL_STAFF_RECORDS;
     }
