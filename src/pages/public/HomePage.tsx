@@ -459,7 +459,7 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 sm:gap-4 text-[11px] text-slate-500">
+                  <div className="flex items-center gap-4 text-[11px] text-slate-500">
                     <span className="flex items-center gap-1">
                       <ShieldCheck className="w-4 h-4 text-emerald-600" />
                       <span>Council Registered</span>
