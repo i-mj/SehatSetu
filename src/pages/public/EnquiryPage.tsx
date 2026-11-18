@@ -1,8 +1,8 @@
 /**
  * Nurse Care - Public Patient Care Enquiry Form
- * Captures patient care needs with client-side validation, honeypot protection,
- * dynamic field configuration from Admin Form Builder, custom questions support,
- * stage NEW dispatch, simulated admin email notification, and clear confirmation view.
+ * Captures patient care needs in a full-width 3-column landscape layout with
+ * simple submit-time validation, honeypot protection, dynamic Admin Form Builder support,
+ * and confirmation state.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -19,12 +19,8 @@ import {
   User,
   MapPin,
   Stethoscope,
-  MessageSquare,
   ArrowRight,
-  ShieldCheck,
-  HelpCircle,
-  Hash,
-  List
+  ShieldCheck
 } from 'lucide-react';
 
 export const EnquiryPage: React.FC = () => {
@@ -46,7 +42,7 @@ export const EnquiryPage: React.FC = () => {
   // Honeypot field (hidden from real users, spambots fill it)
   const [honeypotField, setHoneypotField] = useState('');
 
-  // Status & validation states
+  // Validation & submission states
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittedSuccess, setIsSubmittedSuccess] = useState(false);
@@ -82,78 +78,73 @@ export const EnquiryPage: React.FC = () => {
   // Compute minimum selectable date (today in YYYY-MM-DD)
   const todayString = new Date().toISOString().split('T')[0];
 
-  const handleCustomFieldChange = (fieldName: string, value: string) => {
-    setCustomValues((prev) => ({ ...prev, [fieldName]: value }));
-    if (errors[fieldName]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[fieldName];
-        return next;
-      });
+  const clearError = (key: string) => {
+    if (errors[key]) {
+      setErrors((prev) => ({ ...prev, [key]: '' }));
     }
   };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Full Name
-    if (fnConfig?.enabled) {
-      if (fnConfig.required && (!fullName.trim() || fullName.trim().length < 2)) {
-        newErrors.fullName = 'Please enter a valid full name (minimum 2 characters).';
+    if (fnConfig?.enabled !== false) {
+      if (fnConfig?.required && !fullName.trim()) {
+        newErrors.fullName = 'Please enter patient or caregiver full name.';
+      } else if (fullName.trim() && fullName.trim().length < 2) {
+        newErrors.fullName = 'Please enter a valid name.';
       }
     }
 
-    // Phone validation
-    if (phConfig?.enabled) {
-      const cleanedPhone = phone.replace(/[^0-9]/g, '');
-      if (phConfig.required && (!cleanedPhone || cleanedPhone.length < 10 || cleanedPhone.length > 15)) {
-        newErrors.phone = 'Please enter a valid phone number (10 to 15 digits).';
+    if (phConfig?.enabled !== false) {
+      const cleanDigits = phone.replace(/[^0-9]/g, '');
+      if (phConfig?.required && !phone.trim()) {
+        newErrors.phone = 'Please provide a mobile number for callback.';
+      } else if (phone.trim() && (cleanDigits.length < 10 || cleanDigits.length > 15)) {
+        newErrors.phone = 'Please enter a valid 10 to 15 digit phone number.';
       }
     }
 
-    // Email format
-    if (emConfig?.enabled) {
-      if (emConfig.required && !email.trim()) {
-        newErrors.email = 'Please enter an email address.';
+    if (emConfig?.enabled !== false) {
+      if (emConfig?.required && !email.trim()) {
+        newErrors.email = 'Please provide an email address.';
       } else if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         newErrors.email = 'Please enter a valid email address.';
       }
     }
 
-    // Service dropdown validation
-    if (srConfig?.enabled && srConfig.required && !serviceId) {
+    if (srConfig?.enabled !== false && srConfig?.required && !serviceId) {
       newErrors.serviceId = 'Please select a nursing service.';
     }
 
-    // City/Area validation
-    if (ctConfig?.enabled && ctConfig.required && !cityArea.trim()) {
-      newErrors.cityArea = 'Please enter your city, locality, or sector.';
+    if (ctConfig?.enabled !== false && ctConfig?.required && !cityArea.trim()) {
+      newErrors.cityArea = 'Please specify your locality or area.';
     }
 
-    // Preferred date validation
-    if (dtConfig?.enabled) {
-      if (dtConfig.required && !preferredDate) {
+    if (dtConfig?.enabled !== false) {
+      if (dtConfig?.required && !preferredDate) {
         newErrors.preferredDate = 'Please select a preferred start date.';
       } else if (preferredDate && preferredDate < todayString) {
-        newErrors.preferredDate = 'Preferred date cannot be in the past.';
+        newErrors.preferredDate = 'Preferred start date cannot be in the past.';
       }
     }
 
-    // Message validation if marked required
-    if (mgConfig?.enabled && mgConfig.required && !message.trim()) {
-      newErrors.message = 'Please provide details about the patient care requirements.';
+    if (mgConfig?.enabled !== false && mgConfig?.required && !message.trim()) {
+      newErrors.message = 'Please describe the patient condition or care requirements.';
     }
 
-    // Custom fields validation
     activeCustomFields.forEach((cf) => {
-      const val = customValues[cf.name] || '';
-      if (cf.required && !val.trim()) {
+      if (cf.required && !(customValues[cf.name] || '').trim()) {
         newErrors[cf.name] = `${cf.label} is required.`;
       }
     });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleCustomFieldChange = (fieldName: string, value: string) => {
+    setCustomValues((prev) => ({ ...prev, [fieldName]: value }));
+    clearError(fieldName);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -165,9 +156,7 @@ export const EnquiryPage: React.FC = () => {
       return;
     }
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsSubmitting(true);
 
@@ -184,7 +173,6 @@ export const EnquiryPage: React.FC = () => {
         customFields: Object.keys(customValues).length > 0 ? customValues : undefined
       });
 
-      // Dispatch simulated email notification toast
       addToast(
         'Email alert sent to admin',
         `New enquiry #${newId} for ${fullName.trim()} registered. Duty supervisor notified.`,
@@ -297,13 +285,13 @@ export const EnquiryPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleResetForm}
-                className="w-full sm:w-auto px-6 py-2.5 bg-[#0f8672] hover:bg-[#0e6b5c] text-white font-semibold text-xs rounded-xl shadow transition-colors"
+                className="w-full sm:w-auto px-6 py-2.5 bg-[#0f8672] hover:bg-[#0e6b5c] text-white font-semibold text-xs rounded-xl shadow transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
                 Submit Another Enquiry
               </button>
               <Link
                 to="/"
-                className="w-full sm:w-auto px-6 py-2.5 bg-white border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition-colors"
+                className="w-full sm:w-auto px-6 py-2.5 bg-white border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50 transition-colors whitespace-nowrap shrink-0"
               >
                 Return to Home
               </Link>
@@ -334,7 +322,8 @@ export const EnquiryPage: React.FC = () => {
                       htmlFor="fullName"
                       className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5"
                     >
-                      {fnConfig?.label || 'Patient or Caregiver Full Name'} {fnConfig?.required && <span className="text-rose-600">*</span>}
+                      {fnConfig?.label || 'Patient or Caregiver Full Name'}{' '}
+                      {fnConfig?.required && <span className="text-rose-600">*</span>}
                     </label>
                     <div className="relative">
                       <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
@@ -346,18 +335,18 @@ export const EnquiryPage: React.FC = () => {
                         value={fullName}
                         onChange={(e) => {
                           setFullName(e.target.value);
-                          if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: '' }));
+                          clearError('fullName');
                         }}
-                        className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-teal-700 ${
+                        className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0f8672] transition-colors ${
                           errors.fullName ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
                         }`}
                       />
                     </div>
-                    {fnConfig?.helpText && (
+                    {fnConfig?.helpText && !errors.fullName && (
                       <p className="text-[11px] text-slate-400 mt-1">{fnConfig.helpText}</p>
                     )}
                     {errors.fullName && (
-                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1" role="alert">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>{errors.fullName}</span>
                       </p>
@@ -372,7 +361,8 @@ export const EnquiryPage: React.FC = () => {
                       htmlFor="phone"
                       className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5"
                     >
-                      {phConfig?.label || 'Phone / Mobile Number'} {phConfig?.required && <span className="text-rose-600">*</span>}
+                      {phConfig?.label || 'Phone / Mobile Number'}{' '}
+                      {phConfig?.required && <span className="text-rose-600">*</span>}
                     </label>
                     <div className="relative">
                       <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
@@ -384,18 +374,18 @@ export const EnquiryPage: React.FC = () => {
                         value={phone}
                         onChange={(e) => {
                           setPhone(e.target.value);
-                          if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
+                          clearError('phone');
                         }}
-                        className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-teal-700 ${
+                        className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0f8672] transition-colors font-mono ${
                           errors.phone ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
                         }`}
                       />
                     </div>
-                    {phConfig?.helpText && (
+                    {phConfig?.helpText && !errors.phone && (
                       <p className="text-[11px] text-slate-400 mt-1">{phConfig.helpText}</p>
                     )}
                     {errors.phone && (
-                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1" role="alert">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>{errors.phone}</span>
                       </p>
@@ -427,18 +417,18 @@ export const EnquiryPage: React.FC = () => {
                         value={email}
                         onChange={(e) => {
                           setEmail(e.target.value);
-                          if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
+                          clearError('email');
                         }}
-                        className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-teal-700 ${
+                        className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0f8672] transition-colors ${
                           errors.email ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
                         }`}
                       />
                     </div>
-                    {emConfig?.helpText && (
+                    {emConfig?.helpText && !errors.email && (
                       <p className="text-[11px] text-slate-400 mt-1">{emConfig.helpText}</p>
                     )}
                     {errors.email && (
-                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1" role="alert">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>{errors.email}</span>
                       </p>
@@ -453,7 +443,8 @@ export const EnquiryPage: React.FC = () => {
                       htmlFor="serviceId"
                       className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5"
                     >
-                      {srConfig?.label || 'Nursing Service Required'} {srConfig?.required && <span className="text-rose-600">*</span>}
+                      {srConfig?.label || 'Nursing Service Required'}{' '}
+                      {srConfig?.required && <span className="text-rose-600">*</span>}
                     </label>
                     <div className="relative">
                       <Stethoscope className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
@@ -463,9 +454,9 @@ export const EnquiryPage: React.FC = () => {
                         value={serviceId}
                         onChange={(e) => {
                           setServiceId(e.target.value);
-                          if (errors.serviceId) setErrors((prev) => ({ ...prev, serviceId: '' }));
+                          clearError('serviceId');
                         }}
-                        className={`w-full pl-10 pr-8 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-teal-700 ${
+                        className={`w-full pl-10 pr-8 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0f8672] transition-colors ${
                           errors.serviceId ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
                         }`}
                       >
@@ -477,11 +468,11 @@ export const EnquiryPage: React.FC = () => {
                         ))}
                       </select>
                     </div>
-                    {srConfig?.helpText && (
+                    {srConfig?.helpText && !errors.serviceId && (
                       <p className="text-[11px] text-slate-400 mt-1">{srConfig.helpText}</p>
                     )}
                     {errors.serviceId && (
-                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1" role="alert">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>{errors.serviceId}</span>
                       </p>
@@ -502,7 +493,8 @@ export const EnquiryPage: React.FC = () => {
                       htmlFor="cityArea"
                       className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5"
                     >
-                      {ctConfig?.label || 'City / Locality / Sector'} {ctConfig?.required && <span className="text-rose-600">*</span>}
+                      {ctConfig?.label || 'City / Locality / Sector'}{' '}
+                      {ctConfig?.required && <span className="text-rose-600">*</span>}
                     </label>
                     <div className="relative">
                       <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
@@ -514,14 +506,14 @@ export const EnquiryPage: React.FC = () => {
                         value={cityArea}
                         onChange={(e) => {
                           setCityArea(e.target.value);
-                          if (errors.cityArea) setErrors((prev) => ({ ...prev, cityArea: '' }));
+                          clearError('cityArea');
                         }}
-                        className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-teal-700 ${
+                        className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0f8672] transition-colors ${
                           errors.cityArea ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
                         }`}
                       />
                     </div>
-                    {ctConfig?.helpText && (
+                    {ctConfig?.helpText && !errors.cityArea && (
                       <p className="text-[11px] text-slate-400 mt-1">{ctConfig.helpText}</p>
                     )}
 
@@ -537,9 +529,9 @@ export const EnquiryPage: React.FC = () => {
                               type="button"
                               onClick={() => {
                                 setCityArea(loc.name);
-                                if (errors.cityArea) setErrors((prev) => ({ ...prev, cityArea: '' }));
+                                clearError('cityArea');
                               }}
-                              className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-teal-50 hover:text-[#0f8672] text-slate-600 transition-colors font-medium border border-slate-200/60"
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 hover:bg-teal-50 hover:text-[#0f8672] text-slate-600 transition-colors font-medium border border-slate-200/60 cursor-pointer"
                               title={`Select ${loc.name} (${loc.responseEta})`}
                             >
                               {loc.name}
@@ -548,7 +540,7 @@ export const EnquiryPage: React.FC = () => {
                       </div>
                     )}
                     {errors.cityArea && (
-                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1" role="alert">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>{errors.cityArea}</span>
                       </p>
@@ -580,18 +572,18 @@ export const EnquiryPage: React.FC = () => {
                         value={preferredDate}
                         onChange={(e) => {
                           setPreferredDate(e.target.value);
-                          if (errors.preferredDate) setErrors((prev) => ({ ...prev, preferredDate: '' }));
+                          clearError('preferredDate');
                         }}
-                        className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-teal-700 ${
+                        className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0f8672] transition-colors ${
                           errors.preferredDate ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
                         }`}
                       />
                     </div>
-                    {dtConfig?.helpText && (
+                    {dtConfig?.helpText && !errors.preferredDate && (
                       <p className="text-[11px] text-slate-400 mt-1">{dtConfig.helpText}</p>
                     )}
                     {errors.preferredDate && (
-                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1" role="alert">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>{errors.preferredDate}</span>
                       </p>
@@ -601,7 +593,10 @@ export const EnquiryPage: React.FC = () => {
 
                 {/* Custom Fields configured by Administrator */}
                 {activeCustomFields.map((cf) => (
-                  <div key={cf.id} className={cf.type === 'textarea' ? 'sm:col-span-2 lg:col-span-3' : ''}>
+                  <div
+                    key={cf.id}
+                    className={cf.type === 'textarea' ? 'sm:col-span-2 lg:col-span-3' : ''}
+                  >
                     <label
                       htmlFor={`custom_${cf.name}`}
                       className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5"
@@ -609,57 +604,55 @@ export const EnquiryPage: React.FC = () => {
                       {cf.label} {cf.required && <span className="text-rose-600">*</span>}
                     </label>
 
-                    <div className="relative">
-                      {cf.type === 'select' ? (
-                        <select
-                          id={`custom_${cf.name}`}
-                          required={cf.required}
-                          value={customValues[cf.name] || ''}
-                          onChange={(e) => handleCustomFieldChange(cf.name, e.target.value)}
-                          className={`w-full px-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-teal-700 ${
-                            errors[cf.name] ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
-                          }`}
-                        >
-                          <option value="">Select an option...</option>
-                          {cf.options?.map((opt, i) => (
-                            <option key={i} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      ) : cf.type === 'textarea' ? (
-                        <textarea
-                          id={`custom_${cf.name}`}
-                          rows={3}
-                          required={cf.required}
-                          placeholder={cf.placeholder || ''}
-                          value={customValues[cf.name] || ''}
-                          onChange={(e) => handleCustomFieldChange(cf.name, e.target.value)}
-                          className={`w-full p-3.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-teal-700 ${
-                            errors[cf.name] ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
-                          }`}
-                        />
-                      ) : (
-                        <input
-                          id={`custom_${cf.name}`}
-                          type={cf.type}
-                          required={cf.required}
-                          placeholder={cf.placeholder || ''}
-                          value={customValues[cf.name] || ''}
-                          onChange={(e) => handleCustomFieldChange(cf.name, e.target.value)}
-                          className={`w-full px-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-teal-700 ${
-                            errors[cf.name] ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
-                          }`}
-                        />
-                      )}
-                    </div>
+                    {cf.type === 'select' ? (
+                      <select
+                        id={`custom_${cf.name}`}
+                        required={cf.required}
+                        value={customValues[cf.name] || ''}
+                        onChange={(e) => handleCustomFieldChange(cf.name, e.target.value)}
+                        className={`w-full px-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0f8672] transition-colors ${
+                          errors[cf.name] ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
+                        }`}
+                      >
+                        <option value="">Select an option...</option>
+                        {cf.options?.map((opt, i) => (
+                          <option key={i} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : cf.type === 'textarea' ? (
+                      <textarea
+                        id={`custom_${cf.name}`}
+                        rows={3}
+                        required={cf.required}
+                        placeholder={cf.placeholder || ''}
+                        value={customValues[cf.name] || ''}
+                        onChange={(e) => handleCustomFieldChange(cf.name, e.target.value)}
+                        className={`w-full p-3.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0f8672] transition-colors ${
+                          errors[cf.name] ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
+                        }`}
+                      />
+                    ) : (
+                      <input
+                        id={`custom_${cf.name}`}
+                        type={cf.type}
+                        required={cf.required}
+                        placeholder={cf.placeholder || ''}
+                        value={customValues[cf.name] || ''}
+                        onChange={(e) => handleCustomFieldChange(cf.name, e.target.value)}
+                        className={`w-full px-4 py-2.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0f8672] transition-colors ${
+                          errors[cf.name] ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
+                        }`}
+                      />
+                    )}
 
-                    {cf.helpText && (
+                    {cf.helpText && !errors[cf.name] && (
                       <p className="text-[11px] text-slate-400 mt-1">{cf.helpText}</p>
                     )}
 
                     {errors[cf.name] && (
-                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+                      <p className="text-xs text-rose-600 mt-1 flex items-center gap-1" role="alert">
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>{errors[cf.name]}</span>
                       </p>
@@ -678,27 +671,28 @@ export const EnquiryPage: React.FC = () => {
                     {mgConfig?.label || 'Patient Medical Condition & Specific Requirements'}{' '}
                     {mgConfig?.required && <span className="text-rose-600">*</span>}
                   </label>
-                  <div className="relative">
-                    <textarea
-                      id="message"
-                      rows={3}
-                      required={mgConfig?.required}
-                      placeholder={mgConfig?.placeholder || 'Describe patient age, diagnosis, mobility level, shift preferences, or ongoing doctor prescriptions...'}
-                      value={message}
-                      onChange={(e) => {
-                        setMessage(e.target.value);
-                        if (errors.message) setErrors((prev) => ({ ...prev, message: '' }));
-                      }}
-                      className={`w-full p-3.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white transition-colors focus-visible:outline-2 focus-visible:outline-teal-700 ${
-                        errors.message ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
-                      }`}
-                    />
-                  </div>
-                  {mgConfig?.helpText && (
+                  <textarea
+                    id="message"
+                    rows={3}
+                    required={mgConfig?.required}
+                    placeholder={
+                      mgConfig?.placeholder ||
+                      'Describe patient age, diagnosis, mobility level, shift preferences, or ongoing doctor prescriptions...'
+                    }
+                    value={message}
+                    onChange={(e) => {
+                      setMessage(e.target.value);
+                      clearError('message');
+                    }}
+                    className={`w-full p-3.5 text-sm bg-slate-50/50 border rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0f8672] transition-colors ${
+                      errors.message ? 'border-rose-400 bg-rose-50/30' : 'border-slate-200'
+                    }`}
+                  />
+                  {mgConfig?.helpText && !errors.message && (
                     <p className="text-[11px] text-slate-400 mt-1">{mgConfig.helpText}</p>
                   )}
                   {errors.message && (
-                    <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+                    <p className="text-xs text-rose-600 mt-1 flex items-center gap-1" role="alert">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                       <span>{errors.message}</span>
                     </p>

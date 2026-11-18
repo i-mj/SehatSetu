@@ -200,7 +200,7 @@ export const HomePage: React.FC = () => {
               <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                 <Link
                   to="/enquiry"
-                  className="inline-flex items-center justify-center px-7 py-3.5 text-base font-semibold text-white bg-[#0f8672] hover:bg-[#0e6b5c] rounded-xl shadow-md hover:shadow-lg transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f8672]"
+                  className="whitespace-nowrap shrink-0 inline-flex items-center justify-center px-7 py-3.5 text-base font-semibold text-white bg-[#0f8672] hover:bg-[#0e6b5c] rounded-xl shadow-md hover:shadow-lg transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f8672]"
                 >
                   <span>Enquiry Now</span>
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -208,7 +208,7 @@ export const HomePage: React.FC = () => {
 
                 <Link
                   to="/services"
-                  className="inline-flex items-center justify-center px-6 py-3.5 text-base font-semibold text-[#102d4b] hover:text-[#0f8672] bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                  className="whitespace-nowrap shrink-0 inline-flex items-center justify-center px-6 py-3.5 text-base font-semibold text-[#102d4b] hover:text-[#0f8672] bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
                 >
                   <span>Explore Services</span>
                 </Link>
@@ -231,62 +231,58 @@ export const HomePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Col: Graphic Showcase / Visual Card */}
+            {/* Right Col: Standard Clinical Intake Card */}
             <div className="lg:col-span-5">
               <div className="relative mx-auto max-w-md lg:max-w-none">
-                {/* Decorative glow */}
                 <div className="absolute -inset-1.5 bg-gradient-to-tr from-teal-500/20 to-emerald-300/30 rounded-3xl blur-xl -z-10" />
-
                 <div className="bg-white rounded-2xl border border-teal-100 shadow-xl p-5 sm:p-6 space-y-5">
-                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-[#effaf8] flex items-center justify-center text-[#0f8672]">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-xl bg-[#effaf8] flex items-center justify-center text-[#0f8672] shrink-0">
                         <Stethoscope className="w-6 h-6" />
                       </div>
                       <div>
-                        <h2 className="text-sm font-bold text-slate-900">Standard Clinical Intake</h2>
+                        <h2 className="text-base font-bold text-slate-900">Standard Clinical Intake</h2>
                         <p className="text-xs text-slate-500">Supervised by Head Nurse</p>
                       </div>
                     </div>
-                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-md">
+                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-md shrink-0">
                       Verified
                     </span>
                   </div>
 
-                  {/* Checklist Items */}
-                  <div className="space-y-3.5 text-sm">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-[#0f8672] shrink-0 mt-0.5" />
-                      <span className="text-slate-700">
-                        <strong>Physician Prescription Review:</strong> All medication & dosage cross-checked.
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
+                      <CheckCircle2 className="w-4 h-4 text-[#0f8672] mt-0.5 shrink-0" />
+                      <span>
+                        <strong className="text-slate-900">Physician Prescription Review:</strong> All medication &amp; dosage cross-checked.
                       </span>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-[#0f8672] shrink-0 mt-0.5" />
-                      <span className="text-slate-700">
-                        <strong>Sterile Single-Use Kits:</strong> Complete barrier asepsis at home bedside.
+                    <div className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
+                      <CheckCircle2 className="w-4 h-4 text-[#0f8672] mt-0.5 shrink-0" />
+                      <span>
+                        <strong className="text-slate-900">Sterile Single-Use Kits:</strong> Complete barrier asepsis at home bedside.
                       </span>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-[#0f8672] shrink-0 mt-0.5" />
-                      <span className="text-slate-700">
-                        <strong>Family Progress Updates:</strong> Daily vitals chart shared directly.
+                    <div className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
+                      <CheckCircle2 className="w-4 h-4 text-[#0f8672] mt-0.5 shrink-0" />
+                      <span>
+                        <strong className="text-slate-900">Family Progress Updates:</strong> Daily vitals chart shared directly.
                       </span>
                     </div>
                   </div>
 
-                  {/* Fast booking snippet */}
-                  <div className="p-4 bg-[#effaf8] rounded-xl border border-teal-100/80">
-                    <div className="flex items-center justify-between text-xs font-semibold text-[#0e6b5c] mb-1">
+                  <div className="p-4 bg-[#effaf8] rounded-xl border border-teal-100/80 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs font-semibold text-[#0e6b5c]">
                       <span>Need care today?</span>
-                      <span className="text-teal-700 font-bold">Fast-Track</span>
+                      <span>Fast-Track</span>
                     </div>
-                    <p className="text-xs text-slate-600 mb-3">
+                    <p className="text-xs text-slate-600 leading-relaxed">
                       Direct consultation with our duty coordinator for urgent recovery support.
                     </p>
                     <Link
                       to="/enquiry"
-                      className="block text-center py-2 px-3 bg-[#0f8672] hover:bg-[#0e6b5c] text-white text-xs font-semibold rounded-lg transition-colors"
+                      className="w-full inline-flex items-center justify-center py-2.5 px-4 bg-[#0f8672] hover:bg-[#0e6b5c] text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0"
                     >
                       Book Nurse Visit
                     </Link>

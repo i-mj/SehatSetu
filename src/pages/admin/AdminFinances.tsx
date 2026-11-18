@@ -58,6 +58,38 @@ import {
   Cell
 } from 'recharts';
 
+const computeBillingAdvanceSummary = (b: CareBilling) => {
+  const totalDays = Math.max(0, b.totalDays || 0);
+  const dailyRate = Math.max(0, b.dailyRate || 0);
+  const maxRefundable = Math.max(0, (b.amountPaid || 0) - (b.totalRefunded || 0));
+
+  let daysUsed = 0;
+  if (b.startDate && totalDays > 0) {
+    const parts = b.startDate.split('-').map((n) => parseInt(n, 10));
+    if (parts.length === 3 && parts.every((n) => !Number.isNaN(n))) {
+      const startMidnight = new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+      const now = new Date();
+      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const diffDays = Math.floor((todayMidnight - startMidnight) / 86400000);
+      daysUsed = Math.max(0, Math.min(totalDays, diffDays));
+    }
+  }
+
+  const remainingDays = Math.max(0, totalDays - daysUsed);
+  const usedDaysCharges = daysUsed * dailyRate;
+  const advanceAmount = Math.max(0, maxRefundable - usedDaysCharges);
+
+  return {
+    totalDays,
+    dailyRate,
+    daysUsed,
+    remainingDays,
+    usedDaysCharges,
+    maxRefundable,
+    advanceAmount
+  };
+};
+
 export const AdminFinances: React.FC = () => {
   const {
     billings,
@@ -475,8 +507,8 @@ export const AdminFinances: React.FC = () => {
   // Open Refund
   const openRefund = (b: CareBilling) => {
     setSelectedBillingForRefund(b);
-    const maxRefundable = Math.max(0, (b.amountPaid || 0) - (b.totalRefunded || 0));
-    setRefundAmount(maxRefundable);
+    const { advanceAmount, maxRefundable } = computeBillingAdvanceSummary(b);
+    setRefundAmount(advanceAmount);
     setRefundMode('UPI');
     setRefundReason('Early discharge & adjustment of unused shift days.');
     setRefundTxnRef('');
@@ -2205,10 +2237,15 @@ export const AdminFinances: React.FC = () => {
       {/* MODAL 5: REFUND */}
       {/* ========================================================================= */}
       {selectedBillingForRefund && (() => {
-        const maxRefundable = Math.max(
-          0,
-          (selectedBillingForRefund.amountPaid || 0) - (selectedBillingForRefund.totalRefunded || 0)
-        );
+        const {
+          totalDays,
+          dailyRate,
+          daysUsed,
+          remainingDays,
+          usedDaysCharges,
+          maxRefundable,
+          advanceAmount
+        } = computeBillingAdvanceSummary(selectedBillingForRefund);
         const isAmountInvalid = maxRefundable <= 0 || refundAmount <= 0 || refundAmount > maxRefundable;
         const projectedTotalRefunded = (selectedBillingForRefund.totalRefunded || 0) + Math.min(refundAmount, maxRefundable);
         const willBecomeRefunded = refundSettleDue || projectedTotalRefunded >= (selectedBillingForRefund.amountPaid || 0);
@@ -2237,6 +2274,22 @@ export const AdminFinances: React.FC = () => {
 
               <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
                 <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-200 text-xs space-y-1.5">
+                  <div className="pb-1.5 border-b border-rose-200/80 space-y-0.5">
+                    <div className="flex justify-between items-center text-slate-800">
+                      <span className="font-bold text-[#0e6b5c]">
+                        Advance Amount ({remainingDays}d unused):
+                      </span>
+                      <span className="font-extrabold text-[#0f8672] text-sm tabular-nums">
+                        ₹{advanceAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[11px] text-slate-500 tabular-nums">
+                      <span>
+                        Used: {daysUsed}/{totalDays}d × ₹{dailyRate.toLocaleString('en-IN')}
+                      </span>
+                      <span>−₹{usedDaysCharges.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Total Amount Paid:</span>
                     <span className="font-bold text-slate-900 tabular-nums">
@@ -2264,17 +2317,28 @@ export const AdminFinances: React.FC = () => {
                 ) : (
                   <form onSubmit={handleSaveRefund} className="space-y-3.5 text-xs">
                     <div>
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between gap-2 mb-1">
                         <label className="font-bold text-slate-700">
                           Refund Amount (₹) <span className="text-rose-600">*</span>
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => setRefundAmount(maxRefundable)}
-                          className="text-[11px] font-semibold text-[#0f8672] hover:underline cursor-pointer"
-                        >
-                          Use Max (₹{maxRefundable.toLocaleString('en-IN')})
-                        </button>
+                        <div className="flex items-center gap-2.5 whitespace-nowrap shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setRefundAmount(advanceAmount)}
+                            className="text-[11px] font-semibold text-[#0f8672] hover:underline cursor-pointer tabular-nums"
+                          >
+                            Use Advance (₹{advanceAmount.toLocaleString('en-IN')})
+                          </button>
+                          {maxRefundable !== advanceAmount && (
+                            <button
+                              type="button"
+                              onClick={() => setRefundAmount(maxRefundable)}
+                              className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 hover:underline cursor-pointer tabular-nums"
+                            >
+                              Use Max (₹{maxRefundable.toLocaleString('en-IN')})
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <input
                         type="number"
