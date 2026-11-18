@@ -23,7 +23,9 @@ import {
   Stethoscope,
   MapPin,
   BarChart3,
-  Calendar
+  Calendar,
+  RotateCcw,
+  Inbox
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -37,7 +39,7 @@ import {
 } from 'recharts';
 
 export const AdminDashboard: React.FC = () => {
-  const { enquiries, nurses, reviews, services, serviceLocations } = useApp();
+  const { enquiries, nurses, reviews, services, serviceLocations, billings, contactMessages } = useApp();
 
   // Counts of enquiries per stage
   const countNew = enquiries.filter((e) => e.stage === 'NEW').length;
@@ -48,6 +50,7 @@ export const AdminDashboard: React.FC = () => {
 
   const countPendingNurses = nurses.filter((n) => n.status === 'PENDING').length;
   const countPendingReviews = reviews.filter((r) => r.status === 'PENDING').length;
+  const countNewContactMessages = contactMessages.filter((m) => (m.status || 'NEW') === 'NEW').length;
 
   const [trendRange, setTrendRange] = useState<'6m' | '12m'>('6m');
 
@@ -90,6 +93,29 @@ export const AdminDashboard: React.FC = () => {
 
   const totalEnquiriesInPeriod = monthlyTrendsData.reduce((acc, curr) => acc + curr.enquiries, 0);
   const totalNursesInPeriod = monthlyTrendsData.reduce((acc, curr) => acc + curr.nurseApplications, 0);
+
+  // Refunds summary metrics for Admin Dashboard
+  const refundSummary = useMemo(() => {
+    const allRefunds = billings
+      .flatMap((b) =>
+        (b.refunds || []).map((r) => ({
+          ...r,
+          patientName: b.patientName,
+          serviceName: b.serviceName
+        }))
+      )
+      .sort((a, b) => new Date(b.refundedAt).getTime() - new Date(a.refundedAt).getTime());
+
+    const totalRefundedAmount = billings.reduce((sum, b) => sum + (b.totalRefunded || 0), 0);
+    const refundedAccountsCount = billings.filter((b) => (b.totalRefunded || 0) > 0).length;
+
+    return {
+      totalRefundedAmount,
+      refundTransactionsCount: allRefunds.length,
+      refundedAccountsCount,
+      latestRefund: allRefunds[0] || null
+    };
+  }, [billings]);
 
   // Latest enquiries (sorted by date descending)
   const latestEnquiries = [...enquiries]
@@ -143,8 +169,8 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Actionable Alerts / Pending Items */}
-      {(countPendingNurses > 0 || countPendingReviews > 0 || countNew > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {(countPendingNurses > 0 || countPendingReviews > 0 || countNew > 0 || countNewContactMessages > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {countNew > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -204,53 +230,106 @@ export const AdminDashboard: React.FC = () => {
               </Link>
             </div>
           )}
+
+          {countNewContactMessages > 0 && (
+            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-100 text-[#0f8672] flex items-center justify-center shrink-0">
+                  <Inbox className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-teal-950 tabular-nums">{countNewContactMessages} Contact Enquiries</div>
+                  <div className="text-xs text-teal-700">New Contact Us messages</div>
+                </div>
+              </div>
+              <Link
+                to="/admin/contact-messages"
+                className="text-xs font-semibold text-[#0f8672] hover:underline whitespace-nowrap shrink-0"
+              >
+                Open →
+              </Link>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Quick Services & Coverage Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      {/* Quick Services, Coverage & Refunds Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0f8672] flex items-center justify-center shrink-0">
               <Stethoscope className="w-5 h-5" />
             </div>
-            <div>
-              <div className="text-sm font-bold text-slate-900">
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-slate-900 tabular-nums">
                 {services.filter((s) => s.isActive !== false).length} Active Clinical Services
               </div>
-              <div className="text-xs text-slate-500">
-                Manage descriptions, procedures, and FAQs
+              <div className="text-xs text-slate-500 truncate">
+                Descriptions, procedures & FAQs
               </div>
             </div>
           </div>
           <Link
             to="/admin/services"
-            className="text-xs font-semibold text-[#0f8672] hover:underline"
+            className="text-xs font-semibold text-[#0f8672] hover:underline whitespace-nowrap shrink-0"
           >
             Edit Services →
           </Link>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
               <MapPin className="w-5 h-5" />
             </div>
-            <div>
-              <div className="text-sm font-bold text-slate-900">
-                {serviceLocations.filter((l) => l.isActive !== false).length} Active Coverage Locations
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-slate-900 tabular-nums">
+                {serviceLocations.filter((l) => l.isActive !== false).length} Active Locations
               </div>
-              <div className="text-xs text-slate-500">
-                Change dispatch zones & response ETAs
+              <div className="text-xs text-slate-500 truncate">
+                Dispatch zones & response ETAs
               </div>
             </div>
           </div>
           <Link
             to="/admin/services"
-            className="text-xs font-semibold text-[#0f8672] hover:underline"
+            className="text-xs font-semibold text-[#0f8672] hover:underline whitespace-nowrap shrink-0"
           >
-            Change Locations →
+            Locations →
           </Link>
+        </div>
+
+        <div className="bg-white border border-rose-200/80 rounded-2xl p-4 shadow-2xs flex flex-col justify-between gap-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-bold text-slate-900 tabular-nums">
+                  ₹{refundSummary.totalRefundedAmount.toLocaleString('en-IN')} Refunded
+                </div>
+                <div className="text-xs text-slate-500 tabular-nums">
+                  {refundSummary.refundTransactionsCount} transaction(s) · {refundSummary.refundedAccountsCount} account(s)
+                </div>
+              </div>
+            </div>
+            <Link
+              to="/admin/finances?view=refunds"
+              className="text-xs font-semibold text-rose-700 hover:underline whitespace-nowrap shrink-0"
+            >
+              View Ledger →
+            </Link>
+          </div>
+          {refundSummary.latestRefund ? (
+            <div className="text-[11px] text-slate-600 bg-rose-50/60 border border-rose-100 rounded-lg px-2.5 py-1.5 truncate tabular-nums">
+              Latest: <strong className="text-slate-900">{refundSummary.latestRefund.patientName}</strong> · ₹{refundSummary.latestRefund.amount.toLocaleString('en-IN')} via {refundSummary.latestRefund.refundMode}
+            </div>
+          ) : (
+            <div className="text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+              No patient refunds processed yet
+            </div>
+          )}
         </div>
       </div>
 
@@ -341,25 +420,25 @@ export const AdminDashboard: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4">
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
             <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#0f8672]"></span>
+              <ClipboardList className="w-3.5 h-3.5 text-[#0f8672]" />
               Enquiries ({trendRange === '6m' ? '6M' : '12M'})
             </div>
-            <div className="text-xl font-bold text-slate-900 mt-0.5">{totalEnquiriesInPeriod}</div>
+            <div className="text-xl font-bold text-slate-900 mt-0.5 tabular-nums">{totalEnquiriesInPeriod}</div>
             <div className="text-[10px] text-slate-400">Total care requests received</div>
           </div>
 
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
             <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+              <Users className="w-3.5 h-3.5 text-indigo-600" />
               Nurse Applications ({trendRange === '6m' ? '6M' : '12M'})
             </div>
-            <div className="text-xl font-bold text-slate-900 mt-0.5">{totalNursesInPeriod}</div>
+            <div className="text-xl font-bold text-slate-900 mt-0.5 tabular-nums">{totalNursesInPeriod}</div>
             <div className="text-[10px] text-slate-400">Credentials onboarded</div>
           </div>
 
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
             <div className="text-[11px] font-semibold text-slate-500">Active Nurse Roster</div>
-            <div className="text-xl font-bold text-teal-700 mt-0.5">
+            <div className="text-xl font-bold text-teal-700 mt-0.5 tabular-nums">
               {nurses.filter((n) => n.status === 'ACTIVE').length} Active
             </div>
             <div className="text-[10px] text-slate-400">Ready for dispatch</div>
@@ -367,7 +446,7 @@ export const AdminDashboard: React.FC = () => {
 
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
             <div className="text-[11px] font-semibold text-slate-500">Staffing Inflow Ratio</div>
-            <div className="text-xl font-bold text-indigo-700 mt-0.5">
+            <div className="text-xl font-bold text-indigo-700 mt-0.5 tabular-nums">
               {totalEnquiriesInPeriod > 0
                 ? `${((totalNursesInPeriod / totalEnquiriesInPeriod) * 100).toFixed(1)}%`
                 : '100%'}

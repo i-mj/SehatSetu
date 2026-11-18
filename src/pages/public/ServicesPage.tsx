@@ -206,8 +206,8 @@ export const ServicesPage: React.FC = () => {
       />
 
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/20 to-white pt-16 pb-12 border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
+      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/20 to-white pt-7 pb-6 border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7 text-center max-w-3xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold mb-4">
             <FileText className="w-3.5 h-3.5 text-[#0f8672]" />
             <span>Clinical Care Portfolio</span>
@@ -220,7 +220,7 @@ export const ServicesPage: React.FC = () => {
           </p>
 
           {/* Quick Anchor Navigation */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
             {activeServices.map((srv) => (
               <a
                 key={srv.id}
@@ -245,9 +245,9 @@ export const ServicesPage: React.FC = () => {
       <NursingServicesGrid showLocationStrip={false} isServicePage={true} />
 
       {/* LOCATIONS WHERE WE ARE AVAILABLE (Interactive Coverage Section) */}
-      <section id="coverage-locations" className="scroll-mt-24 py-12 bg-slate-50 border-b border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+      <section id="coverage-locations" className="scroll-mt-24 py-6 sm:py-7 bg-slate-50 border-b border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-6">
             <div className="space-y-1.5 max-w-xl">
               <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#0f8672]">
                 <MapPin className="w-3.5 h-3.5" />
@@ -417,7 +417,7 @@ export const ServicesPage: React.FC = () => {
       </section>
 
       {/* Services List Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7 py-7 space-y-12">
         {activeServices.map((service, idx) => {
           // Resolve location names for this service
           const serviceLocationItems = service.locations && service.locations.length > 0
@@ -428,7 +428,7 @@ export const ServicesPage: React.FC = () => {
             <section
               key={service.id}
               id={service.slug}
-              className="scroll-mt-28 border-b border-slate-200/80 pb-20 last:border-b-0"
+              className="scroll-mt-28 border-b border-slate-200/80 pb-7 last:border-b-0 last:pb-0"
             >
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 {/* Left Column: Service Details & Features */}
@@ -479,7 +479,7 @@ export const ServicesPage: React.FC = () => {
                           className="px-2.5 py-1 bg-white hover:bg-teal-50 text-slate-700 hover:text-[#0f8672] border border-slate-200 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 shadow-2xs"
                           title={`Book ${service.title} in ${loc.name} (${loc.responseEta})`}
                         >
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <MapPin className="w-3 h-3 text-[#0f8672] shrink-0" />
                           <span>{loc.name}</span>
                           <span className="text-[10px] text-slate-400">({loc.responseEta.replace('Within ', '')})</span>
                         </Link>
@@ -576,7 +576,7 @@ export const ServicesPage: React.FC = () => {
                       to="/enquiry"
                       className="text-[#0f8672] font-semibold hover:underline"
                     >
-                      Quick Enquiry →
+                      Enquiry Now →
                     </Link>
                   </div>
                 </div>
@@ -587,8 +587,8 @@ export const ServicesPage: React.FC = () => {
       </div>
 
       {/* Custom Care Note */}
-      <section className="py-16 bg-[#effaf8]/60 border-t border-teal-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+      <section className="py-7 bg-[#effaf8]/60 border-t border-teal-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 text-center space-y-4">
           <h2 className="text-2xl font-bold text-slate-900">
             Need a customized multi-disciplinary care regimen?
           </h2>

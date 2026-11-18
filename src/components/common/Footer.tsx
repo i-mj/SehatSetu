@@ -12,10 +12,10 @@ export const Footer: React.FC = () => {
   const { settings, services } = useApp();
 
   return (
-    <footer className="bg-[#102d4b] text-[#d7e3e9] pt-16 pb-12 border-t border-[#1e4b68]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="bg-[#102d4b] text-[#d7e3e9] pt-7 pb-6 border-t border-[#1e4b68]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
         {/* Emergency Disclaimer Banner - Prominent & Mandatory */}
-        <div className="mb-12 bg-rose-950/60 border border-rose-800/80 rounded-2xl p-5 md:p-6 shadow-inner">
+        <div className="mb-7 bg-rose-950/60 border border-rose-800/80 rounded-2xl p-5 md:p-6 shadow-inner">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="p-3 bg-rose-900/60 text-rose-300 rounded-xl shrink-0">
               <AlertOctagon className="w-6 h-6 stroke-[2.2]" />
@@ -38,7 +38,7 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* 4 Column Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-[#1e4b68]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 pb-6 border-b border-[#1e4b68]">
           {/* Brand & Mission */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-2.5">
@@ -155,7 +155,7 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Legal & Copyright */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="pt-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-1.5 flex-wrap">
             <p>
               © {new Date().getFullYear()} {settings.siteName}. All rights reserved. Prototype demonstration.

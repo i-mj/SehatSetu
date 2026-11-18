@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageSeo } from '../../components/common/PageSeo';
+import { ProfileAvatarUploader } from '../../components/common/ProfileAvatarUploader';
 import {
   User,
   ShieldCheck,
@@ -45,6 +46,7 @@ export const AdminAccountSettings: React.FC = () => {
   const [email, setEmail] = useState(currentAdminUser?.email || 'admin@nursecare.org');
   const [phone, setPhone] = useState(currentAdminUser?.phone || '+91 98112 34567');
   const [designation, setDesignation] = useState(currentAdminUser?.designation || 'Chief Clinical Director & Super Admin');
+  const [avatarUrl, setAvatarUrl] = useState(currentAdminUser?.avatarUrl || '');
 
   // Password Form State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -55,6 +57,8 @@ export const AdminAccountSettings: React.FC = () => {
   // Security 2FA state
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
 
+  const isSuperAdmin = currentAdminUser?.role === 'SUPER_ADMIN';
+
   // Keep state synced if currentAdminUser changes
   React.useEffect(() => {
     if (currentAdminUser) {
@@ -62,6 +66,7 @@ export const AdminAccountSettings: React.FC = () => {
       setEmail(currentAdminUser.email);
       setPhone(currentAdminUser.phone || '');
       setDesignation(currentAdminUser.designation || '');
+      setAvatarUrl(currentAdminUser.avatarUrl || '');
     }
   }, [currentAdminUser]);
 
@@ -76,7 +81,8 @@ export const AdminAccountSettings: React.FC = () => {
       fullName: fullName.trim(),
       email: email.trim().toLowerCase(),
       phone: phone.trim(),
-      designation: designation.trim()
+      designation: designation.trim(),
+      avatarUrl
     });
   };
 
@@ -124,9 +130,17 @@ export const AdminAccountSettings: React.FC = () => {
       <div className="bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 border border-teal-200 rounded-2xl p-5 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#0f8672] text-white flex items-center justify-center font-bold text-2xl shadow-sm shrink-0">
-              {currentAdminUser?.fullName?.charAt(0) || 'A'}
-            </div>
+            {currentAdminUser?.avatarUrl ? (
+              <img
+                src={currentAdminUser.avatarUrl}
+                alt={currentAdminUser.fullName}
+                className="w-14 h-14 rounded-2xl object-cover border border-teal-200 shadow-sm shrink-0 bg-white"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-2xl bg-[#0f8672] text-white flex items-center justify-center font-bold text-2xl shadow-sm shrink-0">
+                {currentAdminUser?.fullName?.charAt(0) || 'A'}
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-slate-900">
@@ -136,7 +150,7 @@ export const AdminAccountSettings: React.FC = () => {
                   {currentAdminUser?.role?.replace('_', ' ') || 'SUPER ADMIN'}
                 </span>
                 <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
                   <span>Session Active</span>
                 </span>
               </div>
@@ -146,30 +160,32 @@ export const AdminAccountSettings: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Account Switcher for Testing Both Admins */}
-          <div className="pt-2 sm:pt-0 border-t sm:border-t-0 border-teal-200">
-            <span className="text-[11px] font-bold text-teal-950 uppercase tracking-wider block mb-1">
-              Switch Admin Account:
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {adminUsers.map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => {
-                    adminLogin(u.email, u.password || 'admin123');
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                    currentAdminUser?.id === u.id
-                      ? 'bg-teal-900 text-white shadow-2xs'
-                      : 'bg-white hover:bg-teal-100 text-teal-900 border border-teal-200'
-                  }`}
-                >
-                  {u.fullName.split(' ')[0]} ({u.role === 'SUPER_ADMIN' ? 'Admin 1' : 'Admin 2'})
-                </button>
-              ))}
+          {/* Quick Account Switcher - Strictly Visible to Super Admin Only */}
+          {isSuperAdmin && (
+            <div className="pt-2 sm:pt-0 border-t sm:border-t-0 border-teal-200">
+              <span className="text-[11px] font-bold text-teal-950 uppercase tracking-wider block mb-1">
+                Super Admin Oversight Switch:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {adminUsers.slice(0, 2).map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => {
+                      adminLogin(u.email, u.password || 'admin123');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                      currentAdminUser?.id === u.id
+                        ? 'bg-teal-900 text-white shadow-2xs'
+                        : 'bg-white hover:bg-teal-100 text-teal-900 border border-teal-200'
+                    }`}
+                  >
+                    {u.fullName.split(' ')[0]} ({u.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin 2'})
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -179,6 +195,17 @@ export const AdminAccountSettings: React.FC = () => {
           <User className="w-4 h-4 text-[#0f8672]" />
           <h2 className="text-sm font-bold text-slate-900">Personal & Clinical Profile</h2>
         </div>
+
+        <ProfileAvatarUploader
+          avatarUrl={avatarUrl}
+          fullName={fullName}
+          onChange={(nextUrl) => {
+            setAvatarUrl(nextUrl);
+            updateCurrentAdminProfile({ avatarUrl: nextUrl });
+          }}
+          label="Your Profile Picture"
+          helperText="Upload a JPG, PNG, or WebP photo from your device. Updates immediately in the console."
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div>

@@ -503,8 +503,8 @@ export const AdminNurses: React.FC = () => {
     switch (stage) {
       case 'CONFIRMED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#0f8672] animate-pulse" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200 whitespace-nowrap">
+            <CheckCircle2 className="w-3 h-3 text-[#0f8672] shrink-0" />
             <span>CONFIRMED · ON DUTY</span>
           </span>
         );
@@ -765,7 +765,7 @@ export const AdminNurses: React.FC = () => {
       {isAnyFilterActive && (
         <div className="flex flex-wrap items-center gap-2 bg-[#effaf8] border border-teal-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-700">
           <div className="flex items-center gap-2 font-bold text-teal-900 mr-1">
-            <span className="w-2 h-2 rounded-full bg-[#0f8672] animate-pulse" />
+            <Filter className="w-3.5 h-3.5 text-[#0f8672] shrink-0" />
             <span>Active Filters ({filteredNurses.length} matching):</span>
           </div>
 
@@ -840,7 +840,7 @@ export const AdminNurses: React.FC = () => {
       {/* Nurses Table */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
         {filteredNurses.length === 0 ? (
-          <div className="py-16 text-center text-slate-500 text-xs">
+          <div className="py-7 text-center text-slate-500 text-xs">
             No nurse records found for the selected filter.
           </div>
         ) : (
@@ -889,7 +889,7 @@ export const AdminNurses: React.FC = () => {
                                   key={p.id}
                                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 text-teal-900 text-[11px] font-semibold border border-teal-200/90 shadow-2xs"
                                 >
-                                  <span className="w-2 h-2 rounded-full bg-[#0f8672] animate-pulse" />
+                                  <HeartPulse className="w-3 h-3 text-[#0f8672] shrink-0" />
                                   <span>{p.fullName}</span>
                                   <span className="text-[10px] text-teal-700 font-normal">
                                     · {srv ? srv.title : 'Care'}
@@ -970,19 +970,19 @@ export const AdminNurses: React.FC = () => {
 
         return (
           <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
             role="dialog"
             aria-modal="true"
           >
-            <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-6 my-auto max-h-[92vh] overflow-y-auto border border-slate-100">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0f8672] border border-teal-200 flex items-center justify-center font-bold text-xl shadow-xs">
+            <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+              {/* Fixed Header */}
+              <div className="flex items-center justify-between px-6 sm:px-7 py-5 border-b border-slate-100 shrink-0 bg-white">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#0f8672] border border-teal-200 flex items-center justify-center font-bold text-xl shadow-xs shrink-0">
                     {activeDetailNurse.fullName.charAt(0)}
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-bold text-slate-900 tracking-tight truncate">
                       {activeDetailNurse.fullName}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -995,11 +995,14 @@ export const AdminNurses: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setDetailNurse(null)}
-                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors shrink-0 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Scrollable Body */}
+              <div className="flex-1 overflow-y-auto px-6 sm:px-7 py-5 space-y-6">
 
               {/* Quick Status Toggles */}
               <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1248,8 +1251,8 @@ export const AdminNurses: React.FC = () => {
                             Currently Assigned
                           </h4>
                           {currentlyAssignedPatients.length > 0 ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#0f8672] text-white shadow-2xs">
-                              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#0f8672] text-white shadow-2xs whitespace-nowrap">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-200 shrink-0" />
                               <span>Actively Handling ({currentlyAssignedPatients.length})</span>
                             </span>
                           ) : (
@@ -1346,7 +1349,7 @@ export const AdminNurses: React.FC = () => {
                       return (
                         <div
                           key={patient.id}
-                          className="bg-white border-2 border-teal-300/80 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 hover:border-teal-400 transition-colors"
+                          className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4 hover:border-teal-300 transition-colors"
                         >
                           {/* Patient Header Row */}
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -1398,26 +1401,26 @@ export const AdminNurses: React.FC = () => {
                             </div>
 
                             {/* Location */}
-                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between gap-2">
-                              <div>
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col justify-between gap-1.5 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">
                                   Patient Area / Address
                                 </span>
-                                <div className="flex items-center gap-1.5 font-semibold text-slate-900">
-                                  <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                                  <span className="truncate">{patient.cityArea}</span>
-                                </div>
+                                <a
+                                  href={`https://maps.google.com/?q=${encodeURIComponent(patient.cityArea)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-[#0f8672] bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-md transition-colors shrink-0 whitespace-nowrap"
+                                  title="Open patient location on Google Maps"
+                                >
+                                  <MapPin className="w-3 h-3 shrink-0" />
+                                  <span>Map</span>
+                                </a>
                               </div>
-                              <a
-                                href={`https://maps.google.com/?q=${encodeURIComponent(patient.cityArea)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-[#0f8672] bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-colors shrink-0"
-                                title="Open patient location on Google Maps"
-                              >
-                                <MapPin className="w-3 h-3" />
-                                <span>Map</span>
-                              </a>
+                              <div className="flex items-center gap-1.5 font-semibold text-slate-900 min-w-0">
+                                <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                <span className="truncate">{patient.cityArea}</span>
+                              </div>
                             </div>
 
                             {/* Schedule */}
@@ -1691,22 +1694,24 @@ export const AdminNurses: React.FC = () => {
                 </div>
               )}
 
-              {/* Modal Footer */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              </div>
+
+              {/* Fixed Modal Footer */}
+              <div className="flex justify-end gap-3 px-6 sm:px-7 py-4 border-t border-slate-100 shrink-0 bg-white">
                 <button
                   type="button"
                   onClick={() => {
                     openEditModal(activeDetailNurse);
                     setDetailNurse(null);
                   }}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-xs font-semibold rounded-xl text-slate-800 transition-colors"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-xs font-semibold rounded-xl text-slate-800 transition-colors cursor-pointer"
                 >
                   Edit Nurse Profile
                 </button>
                 <button
                   type="button"
                   onClick={() => setDetailNurse(null)}
-                  className="px-4 py-2 bg-[#0f8672] hover:bg-[#0e6b5c] text-white text-xs font-semibold rounded-xl transition-colors"
+                  className="px-4 py-2 bg-[#0f8672] hover:bg-[#0e6b5c] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
                 >
                   Close
                 </button>
@@ -1719,27 +1724,28 @@ export const AdminNurses: React.FC = () => {
       {/* ADD / EDIT NURSE MODAL */}
       {(isAddModalOpen || editingNurse) && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
               <h3 className="text-sm font-bold text-slate-900">
                 {editingNurse ? `Edit Nurse: ${editingNurse.fullName}` : 'Add New Nurse to Roster'}
               </h3>
               <button
+                type="button"
                 onClick={() => {
                   setIsAddModalOpen(false);
                   setEditingNurse(null);
                 }}
-                className="text-slate-400 hover:text-slate-700"
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveNurse} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveNurse} className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Full Legal Name *</label>
                 <input

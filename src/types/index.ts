@@ -163,6 +163,8 @@ export interface AdminUser {
   createdAt: string;
 }
 
+export type ContactMessageStatus = 'NEW' | 'PENDING' | 'IN_PROGRESS' | 'RESOLVED' | 'ARCHIVED';
+
 export interface ContactMessage {
   id: string;
   fullName: string;
@@ -170,6 +172,9 @@ export interface ContactMessage {
   phone: string;
   subject: string;
   message: string;
+  status?: ContactMessageStatus;
+  adminNotes?: string;
+  updatedAt?: string;
   createdAt: string;
 }
 
@@ -193,6 +198,7 @@ export interface StaffRecord {
   emergencyContact?: string;
   joinDate: string;
   notes?: string;
+  avatarUrl?: string;
   createdAt: string;
   canLogin?: boolean;
   loginRole?: StaffLoginRole; // STAFF (Enquiries & Nurses only) vs FINANCE (Finances only)
@@ -276,5 +282,34 @@ export interface CareBilling {
   createdAt: string;
   updatedAt: string;
 }
+
+// ==========================================
+// SYSTEM ACTIVITY & AUDIT LOGS
+// ==========================================
+export type ActivityLogCategory =
+  | 'AUTH'
+  | 'ENQUIRY'
+  | 'NURSE'
+  | 'FINANCE'
+  | 'CONTACT'
+  | 'REVIEW'
+  | 'SERVICE'
+  | 'STAFF'
+  | 'SETTINGS';
+
+export interface ActivityLogEntry {
+  id: string;
+  actorId: string;
+  actorName: string;
+  actorEmail: string;
+  actorRole: AdminUserRole | 'PUBLIC';
+  action: string;
+  category: ActivityLogCategory;
+  targetType?: string;
+  targetId?: string;
+  details: string;
+  timestamp: string;
+}
+
 
 

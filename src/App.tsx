@@ -35,6 +35,8 @@ import { AdminFormFields } from './pages/admin/AdminFormFields';
 import { AdminServices } from './pages/admin/AdminServices';
 import { AdminStaffUsers } from './pages/admin/AdminStaffUsers';
 import { AdminAccountSettings } from './pages/admin/AdminAccountSettings';
+import { AdminContactMessages } from './pages/admin/AdminContactMessages';
+import { AdminActivityLogs } from './pages/admin/AdminActivityLogs';
 
 // Scroll to top on navigation change & Discreet Admin Shortcut Listener
 const NavigationHelpers = () => {
@@ -110,12 +112,14 @@ export default function App() {
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="enquiries" element={<AdminEnquiries />} />
+            <Route path="contact-messages" element={<AdminContactMessages />} />
             <Route path="nurses" element={<AdminNurses />} />
             <Route path="finances" element={<AdminFinances />} />
             <Route path="reviews" element={<AdminReviews />} />
             <Route path="form-fields" element={<AdminFormFields />} />
             <Route path="services" element={<AdminServices />} />
             <Route path="staff" element={<AdminStaffUsers />} />
+            <Route path="activity-logs" element={<AdminActivityLogs />} />
             <Route path="account" element={<AdminAccountSettings />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>

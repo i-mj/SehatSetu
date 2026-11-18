@@ -469,7 +469,7 @@ export const AdminServices: React.FC = () => {
           </div>
 
           {filteredServices.length === 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center space-y-3">
               <Info className="w-8 h-8 text-slate-400 mx-auto" />
               <p className="text-sm font-semibold text-slate-700">No services match your search.</p>
               <button
@@ -626,10 +626,10 @@ export const AdminServices: React.FC = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
         >
-          <div className="bg-white rounded-2xl max-w-3xl w-full my-8 p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+          <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0f8672] flex items-center justify-center">
                   <Sparkles className="w-4 h-4" />
@@ -650,13 +650,13 @@ export const AdminServices: React.FC = () => {
                   setEditingService(null);
                   setIsCreatingService(false);
                 }}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveService} className="space-y-6 text-xs">
+            <form onSubmit={handleSaveService} className="flex-1 overflow-y-auto px-6 py-5 space-y-6 text-xs">
               {/* Primary Info */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

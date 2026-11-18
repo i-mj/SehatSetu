@@ -58,7 +58,7 @@ export const AdminLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-7 sm:px-6 lg:px-7">
       <PageSeo
         title="Admin Portal Login"
         description="Administrative authentication portal for Nurse Care home healthcare system."
@@ -164,7 +164,7 @@ export const AdminLogin: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white py-8 px-6 shadow-sm border border-slate-200 rounded-2xl sm:px-10">
+        <div className="bg-white py-6 px-6 shadow-sm border border-slate-200 rounded-2xl sm:px-7">
           {error && (
             <div className="mb-5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700">
               {error}

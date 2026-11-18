@@ -41,7 +41,7 @@ export const SitemapPage: React.FC = () => {
         description="Comprehensive website map and link index for Nurse Care home nursing service."
       />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 py-7">
         <TestContentBanner pageName="Sitemap" />
 
         <div className="flex items-center gap-2.5 mb-2">
@@ -52,7 +52,7 @@ export const SitemapPage: React.FC = () => {
           Overview of all public web pages, clinical service portfolios, patient rights charters, and legal policies.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 border border-slate-200 rounded-2xl p-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 border border-slate-200 rounded-2xl p-6">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 mb-4 pb-2 border-b border-slate-200">
               Primary Public Navigation
@@ -158,7 +158,7 @@ export const TermsConditionsPage: React.FC = () => {
         description="Comprehensive terms of service, care package fees, cancellations, and 7-day refund policies for Nurse Care home nursing."
       />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 py-7">
         <TestContentBanner pageName="Terms and Conditions (Seva At Home Standards)" />
 
         <div className="flex items-center gap-2.5 mb-2">
@@ -185,7 +185,7 @@ export const TermsConditionsPage: React.FC = () => {
             <p>
               {settings.siteName} coordinates skilled registered nurses (GNM / B.Sc Nursing) and certified attendants to deliver doctor-prescribed interventions, palliative support, geriatric care, and postoperative wound rehabilitation directly at the patient’s home.
             </p>
-            <div className="p-3 bg-amber-50 border-l-4 border-amber-400 text-amber-900 text-xs">
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs">
               <strong>Emergency Medical Disclaimer:</strong> {settings.siteName} is <em>not</em> an emergency ambulance or emergency trauma response service. In the event of acute emergencies (such as sudden cardiac arrest, acute chest pain, uncontrolled hemorrhaging, or severe respiratory failure), dial 112 immediately.
             </div>
           </section>
@@ -270,7 +270,7 @@ export const PrivacyPolicyPage: React.FC = () => {
         description="Comprehensive privacy policy reflecting Health Care At Home (HCAH) standards: Data controller roles, 256-bit encryption, prescription security, and patient data rights."
       />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 py-7">
         <TestContentBanner pageName="Privacy Policy (HCAH Standards)" />
 
         <div className="flex items-center gap-2.5 mb-2">
@@ -383,8 +383,8 @@ export const PatientCharterPage: React.FC = () => {
       />
 
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/30 to-white pt-16 pb-12 border-b border-slate-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/30 to-white pt-7 pb-6 border-b border-slate-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 text-center">
           <TestContentBanner pageName="Patient Charter (HCAH Standards)" />
 
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold mb-4">
@@ -401,7 +401,7 @@ export const PatientCharterPage: React.FC = () => {
         </div>
       </section>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 py-6 sm:py-7 space-y-8">
         {/* Core Philosophy Banner */}
         <div className="p-6 bg-gradient-to-r from-teal-500/10 via-emerald-500/10 to-teal-500/10 border border-teal-200 rounded-3xl flex flex-col sm:flex-row items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-[#0f8672] text-white flex items-center justify-center shrink-0 shadow-sm">

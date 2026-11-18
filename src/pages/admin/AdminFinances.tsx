@@ -5,7 +5,8 @@
  * refunds, and audit statements.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageSeo } from '../../components/common/PageSeo';
 import { CareBilling, PaymentMode, BillingStatus, Enquiry } from '../../types';
@@ -40,7 +41,8 @@ import {
   UserCheck,
   BarChart3,
   PieChart as PieChartIcon,
-  Layers
+  Layers,
+  AlertTriangle
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -71,13 +73,23 @@ export const AdminFinances: React.FC = () => {
     currentAdminUser
   } = useApp();
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | BillingStatus>('ALL');
 
-  // View Mode: 'both' (Charts + Invoices), 'charts' (Only Visuals), 'table' (Only Invoices)
-  const [viewMode, setViewMode] = useState<'both' | 'charts' | 'table'>('both');
+  // View Mode: 'both' (Charts + Invoices), 'charts' (Only Visuals), 'table' (Only Invoices), 'refunds' (Refunds Ledger)
+  const initialView = searchParams.get('view') === 'refunds' ? 'refunds' : 'both';
+  const [viewMode, setViewMode] = useState<'both' | 'charts' | 'table' | 'refunds'>(initialView);
   const [timeRange, setTimeRange] = useState<'6m' | '12m'>('6m');
+
+  useEffect(() => {
+    const viewParam = searchParams.get('view');
+    if (viewParam === 'refunds') {
+      setViewMode('refunds');
+    }
+  }, [searchParams]);
 
   // Patient Search & Profile modal states
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
@@ -88,6 +100,7 @@ export const AdminFinances: React.FC = () => {
   const [selectedBillingForPayment, setSelectedBillingForPayment] = useState<CareBilling | null>(null);
   const [selectedBillingForEditDuration, setSelectedBillingForEditDuration] = useState<CareBilling | null>(null);
   const [selectedBillingForExtend, setSelectedBillingForExtend] = useState<CareBilling | null>(null);
+  const [isExtendReactivateConfirmOpen, setIsExtendReactivateConfirmOpen] = useState(false);
   const [selectedBillingForRefund, setSelectedBillingForRefund] = useState<CareBilling | null>(null);
   const [selectedBillingForStatement, setSelectedBillingForStatement] = useState<CareBilling | null>(null);
 
@@ -133,9 +146,10 @@ export const AdminFinances: React.FC = () => {
   // Form State: Refund
   const [refundAmount, setRefundAmount] = useState(0);
   const [refundMode, setRefundMode] = useState<'UPI' | 'Bank Transfer' | 'Cash'>('UPI');
-  const [refundReason, setRefundReason] = useState('Early hospital discharge / clinical goal completed.');
+  const [refundReason, setRefundReason] = useState('Early hospital discharge & adjustment of unused shift days.');
   const [refundTxnRef, setRefundTxnRef] = useState('');
   const [refundProcessedBy, setRefundProcessedBy] = useState(currentAdminUser?.fullName || 'Admin Desk');
+  const [refundSettleDue, setRefundSettleDue] = useState(false);
 
   // Filtered billings
   const filteredBillings = useMemo(() => {
@@ -150,11 +164,39 @@ export const AdminFinances: React.FC = () => {
     });
   }, [billings, searchQuery, statusFilter]);
 
+  // Flattened Refund Records for the Admin Refunds Ledger
+  const allRefundRecords = useMemo(() => {
+    return billings
+      .flatMap((b) =>
+        (b.refunds || []).map((r) => ({
+          ...r,
+          billing: b
+        }))
+      )
+      .sort((a, b) => new Date(b.refundedAt).getTime() - new Date(a.refundedAt).getTime());
+  }, [billings]);
+
+  const filteredRefundRecords = useMemo(() => {
+    if (!searchQuery.trim()) return allRefundRecords;
+    const q = searchQuery.toLowerCase();
+    return allRefundRecords.filter(
+      (item) =>
+        item.billing.patientName.toLowerCase().includes(q) ||
+        item.billing.phone.includes(q) ||
+        item.billing.serviceName.toLowerCase().includes(q) ||
+        item.billing.id.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        (item.transactionRef || '').toLowerCase().includes(q) ||
+        item.reason.toLowerCase().includes(q)
+    );
+  }, [allRefundRecords, searchQuery]);
+
   // Financial KPI calculations
   const totalBilled = billings.reduce((sum, b) => sum + (b.totalCharges || 0), 0);
   const totalCollected = billings.reduce((sum, b) => sum + (b.amountPaid || 0), 0);
   const totalBalanceDue = billings.reduce((sum, b) => sum + (b.balanceDue || 0), 0);
   const totalRefunded = billings.reduce((sum, b) => sum + (b.totalRefunded || 0), 0);
+  const netCollected = Math.max(0, totalCollected - totalRefunded);
 
   const collectionRate = totalBilled > 0 ? Math.min(100, Math.round((totalCollected / totalBilled) * 100)) : 100;
   const avgInvoiceAmount = billings.length > 0 ? Math.round(totalBilled / billings.length) : 0;
@@ -370,22 +412,40 @@ export const AdminFinances: React.FC = () => {
   // Open Extend Duration
   const openExtend = (b: CareBilling) => {
     setSelectedBillingForExtend(b);
+    setIsExtendReactivateConfirmOpen(false);
     setExtendDays(7);
     setExtendCharges(7 * b.dailyRate);
     setExtendReason('Patient recovery extended on family request.');
   };
 
-  const handleSaveExtend = (e: React.FormEvent) => {
-    e.preventDefault();
+  const commitExtend = (reactivateCompleted: boolean) => {
     if (!selectedBillingForExtend) return;
-
     extendBillingDuration(selectedBillingForExtend.id, {
       extendedDays: extendDays,
       additionalCharges: extendCharges,
       reason: extendReason,
-      authorizedBy: extendAuthorizedBy
+      authorizedBy: extendAuthorizedBy,
+      reactivateCompleted
     });
+    setIsExtendReactivateConfirmOpen(false);
     setSelectedBillingForExtend(null);
+  };
+
+  const handleSaveExtend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBillingForExtend || extendDays <= 0) return;
+
+    const linkedEnq = getEnquiryForBilling(selectedBillingForExtend);
+    const needsReactivationConfirm =
+      selectedBillingForExtend.status === 'COMPLETED' ||
+      linkedEnq?.stage === 'COMPLETED';
+
+    if (needsReactivationConfirm) {
+      setIsExtendReactivateConfirmOpen(true);
+      return;
+    }
+
+    commitExtend(false);
   };
 
   // Open Add Money
@@ -420,19 +480,27 @@ export const AdminFinances: React.FC = () => {
     setRefundMode('UPI');
     setRefundReason('Early discharge & adjustment of unused shift days.');
     setRefundTxnRef('');
+    setRefundProcessedBy(currentAdminUser?.fullName || 'Admin Desk');
+    setRefundSettleDue((b.balanceDue || 0) > 0 && maxRefundable > 0);
   };
 
   const handleSaveRefund = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedBillingForRefund || refundAmount <= 0) return;
+    if (!selectedBillingForRefund) return;
+    const maxRefundable = Math.max(
+      0,
+      (selectedBillingForRefund.amountPaid || 0) - (selectedBillingForRefund.totalRefunded || 0)
+    );
+    if (refundAmount <= 0 || refundAmount > maxRefundable) return;
 
     processRefund(selectedBillingForRefund.id, {
       amount: refundAmount,
-      reason: refundReason,
+      reason: refundReason.trim() || 'Service refund adjustment',
       refundMode: refundMode,
       transactionRef: refundTxnRef.trim() || undefined,
-      processedBy: refundProcessedBy,
-      status: 'PROCESSED'
+      processedBy: refundProcessedBy.trim() || 'Admin Desk',
+      status: 'PROCESSED',
+      settleRemainingDue: refundSettleDue
     });
     setSelectedBillingForRefund(null);
   };
@@ -479,7 +547,7 @@ export const AdminFinances: React.FC = () => {
               <FileText className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-extrabold text-slate-900">
+          <div className="text-2xl font-extrabold text-slate-900 tabular-nums">
             ₹{totalBilled.toLocaleString('en-IN')}
           </div>
           <p className="text-[11px] text-slate-400">
@@ -487,19 +555,19 @@ export const AdminFinances: React.FC = () => {
           </p>
         </div>
 
-        {/* Total Collected / Money Added */}
+        {/* Total Collected / Net after refunds */}
         <div className="p-5 bg-white border border-emerald-200/80 rounded-2xl shadow-2xs space-y-2 bg-emerald-50/20">
           <div className="flex items-center justify-between text-xs font-bold text-emerald-800 uppercase tracking-wider">
-            <span>Money Collected</span>
+            <span>Net Collected</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
               <CreditCard className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-extrabold text-emerald-700">
-            ₹{totalCollected.toLocaleString('en-IN')}
+          <div className="text-2xl font-extrabold text-emerald-700 tabular-nums">
+            ₹{netCollected.toLocaleString('en-IN')}
           </div>
-          <p className="text-[11px] text-emerald-600/80">
-            Verified advance & running receipts
+          <p className="text-[11px] text-emerald-700/80 tabular-nums">
+            Gross paid: ₹{totalCollected.toLocaleString('en-IN')}
           </p>
         </div>
 
@@ -511,7 +579,7 @@ export const AdminFinances: React.FC = () => {
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-extrabold text-amber-700">
+          <div className="text-2xl font-extrabold text-amber-700 tabular-nums">
             ₹{totalBalanceDue.toLocaleString('en-IN')}
           </div>
           <p className="text-[11px] text-amber-600/80">
@@ -519,27 +587,35 @@ export const AdminFinances: React.FC = () => {
           </p>
         </div>
 
-        {/* Total Refunded */}
-        <div className="p-5 bg-white border border-rose-200/80 rounded-2xl shadow-2xs space-y-2 bg-rose-50/20">
+        {/* Total Refunded - Interactive to jump to Refunds Ledger */}
+        <button
+          type="button"
+          onClick={() => {
+            setViewMode('refunds');
+            setSearchParams({ view: 'refunds' });
+          }}
+          className="text-left p-5 bg-white border border-rose-200/80 rounded-2xl shadow-2xs space-y-2 bg-rose-50/20 hover:border-rose-300 hover:shadow-sm transition-all cursor-pointer"
+        >
           <div className="flex items-center justify-between text-xs font-bold text-rose-800 uppercase tracking-wider">
             <span>Refunds Issued</span>
             <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center">
               <RotateCcw className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-extrabold text-rose-700">
+          <div className="text-2xl font-extrabold text-rose-700 tabular-nums">
             ₹{totalRefunded.toLocaleString('en-IN')}
           </div>
-          <p className="text-[11px] text-rose-600/80">
-            For early discharge / unused shifts
+          <p className="text-[11px] text-rose-700 font-medium flex items-center justify-between">
+            <span>{allRefundRecords.length} refund transaction{allRefundRecords.length === 1 ? '' : 's'}</span>
+            <span className="underline">View Ledger →</span>
           </p>
-        </div>
+        </button>
       </div>
 
       {/* View Mode & Analytics Controls Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0f8672] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0f8672] flex items-center justify-center shrink-0">
             <BarChart3 className="w-4 h-4" />
           </div>
           <div>
@@ -547,17 +623,20 @@ export const AdminFinances: React.FC = () => {
               Financial Intelligence & Viewport
             </h2>
             <p className="text-[11px] text-slate-500">
-              Interactive revenue analytics and patient account ledger
+              Interactive revenue analytics, patient billing ledger, and processed refunds log
             </p>
           </div>
         </div>
 
         {/* View Mode Switcher Tabs */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl self-start sm:self-auto">
+        <div className="flex flex-wrap items-center bg-slate-100 p-1 rounded-xl gap-1 self-start lg:self-auto">
           <button
             type="button"
-            onClick={() => setViewMode('both')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+            onClick={() => {
+              setViewMode('both');
+              setSearchParams({});
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               viewMode === 'both'
                 ? 'bg-white text-slate-900 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -568,8 +647,11 @@ export const AdminFinances: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setViewMode('charts')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+            onClick={() => {
+              setViewMode('charts');
+              setSearchParams({});
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               viewMode === 'charts'
                 ? 'bg-white text-slate-900 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -580,8 +662,11 @@ export const AdminFinances: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setViewMode('table')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+            onClick={() => {
+              setViewMode('table');
+              setSearchParams({});
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               viewMode === 'table'
                 ? 'bg-white text-slate-900 shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -590,13 +675,28 @@ export const AdminFinances: React.FC = () => {
             <Receipt className="w-3.5 h-3.5 text-teal-600" />
             <span>Invoices Table</span>
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode('refunds');
+              setSearchParams({ view: 'refunds' });
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              viewMode === 'refunds'
+                ? 'bg-white text-rose-700 shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+            <span>Refunds Ledger ({allRefundRecords.length})</span>
+          </button>
         </div>
       </div>
 
       {/* ========================================================================= */}
       {/* RECHARTS ANALYTICS VIEW: MONTHLY REVENUE & INVOICE STATUS DISTRIBUTION */}
       {/* ========================================================================= */}
-      {viewMode !== 'table' && (
+      {(viewMode === 'both' || viewMode === 'charts') && (
         <div className="space-y-4">
           {/* Analytics KPI Highlights */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -862,13 +962,145 @@ export const AdminFinances: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
+      {/* REFUNDS LEDGER VIEW */}
+      {/* ========================================================================= */}
+      {viewMode === 'refunds' && (
+        <div className="space-y-4">
+          <div className="bg-white border border-rose-200/80 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 flex items-center justify-center shrink-0">
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Processed Patient Refunds Ledger</h3>
+                <p className="text-xs text-slate-500">
+                  Total Refunded: <strong className="text-rose-700 tabular-nums">₹{totalRefunded.toLocaleString('en-IN')}</strong> across {allRefundRecords.length} transaction{allRefundRecords.length === 1 ? '' : 's'}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search refund patient, UTR, billing ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus-visible:outline-teal-700 focus:bg-white transition-colors"
+              />
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
+            {filteredRefundRecords.length === 0 ? (
+              <div className="p-7 text-center space-y-2">
+                <RotateCcw className="w-9 h-9 text-slate-300 mx-auto" />
+                <h4 className="text-sm font-bold text-slate-700">No Refund Transactions Found</h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  Processed refunds from patient billing accounts will automatically appear in this audit ledger.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                    <tr>
+                      <th className="py-3 px-4">Refund Ref & Date</th>
+                      <th className="py-3 px-4">Patient & Billing</th>
+                      <th className="py-3 px-4">Refund Amount</th>
+                      <th className="py-3 px-4">Mode & UTR</th>
+                      <th className="py-3 px-4">Reason & Processed By</th>
+                      <th className="py-3 px-4 text-right">Statement</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredRefundRecords.map((item) => {
+                      const matchedEnq = getEnquiryForBilling(item.billing);
+                      return (
+                        <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-3.5 px-4 align-top">
+                            <div className="font-mono font-bold text-slate-800 text-[11px]">#{item.id}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5 tabular-nums">
+                              {new Date(item.refundedAt).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                              })}
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 align-top">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-slate-900">{item.billing.patientName}</span>
+                              {matchedEnq && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedPatientForProfile(matchedEnq)}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-teal-50 hover:bg-teal-100 text-[#0f8672] text-[10px] font-semibold border border-teal-200 cursor-pointer"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  <span>Profile</span>
+                                </button>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-mono">{item.billing.phone}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {item.billing.serviceName} · <span className="font-mono">#{item.billing.id}</span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 align-top">
+                            <div className="text-sm font-extrabold text-rose-700 tabular-nums">
+                              -₹{item.amount.toLocaleString('en-IN')}
+                            </div>
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              {item.status}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-4 align-top">
+                            <div className="font-semibold text-slate-800">{item.refundMode}</div>
+                            <div className="text-[11px] font-mono text-slate-500 mt-0.5">
+                              {item.transactionRef || 'Internal Adjustment'}
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 align-top max-w-xs">
+                            <p className="text-slate-700 leading-snug">{item.reason}</p>
+                            <div className="text-[10px] text-slate-400 mt-1">
+                              Processed by: <span className="font-semibold text-slate-600">{item.processedBy}</span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 align-top text-right">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBillingForStatement(item.billing)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                            >
+                              <Receipt className="w-3.5 h-3.5 text-[#0f8672]" />
+                              <span>Statement</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* BILLING TABLE & RECORDS LEDGER */}
       {/* ========================================================================= */}
-      {viewMode !== 'charts' && (
+      {(viewMode === 'both' || viewMode === 'table') && (
         <div className="space-y-4">
           {/* Search and Filters */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="relative w-full md:w-96">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="relative w-full lg:w-96">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               <input
                 type="text"
@@ -879,13 +1111,13 @@ export const AdminFinances: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
               {(['ALL', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'REFUNDED'] as const).map((status) => (
                 <button
                   key={status}
                   type="button"
                   onClick={() => setStatusFilter(status)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                     statusFilter === status
                       ? 'bg-[#0f8672] text-white shadow-2xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -900,7 +1132,7 @@ export const AdminFinances: React.FC = () => {
           {/* Billings Table / Cards */}
           <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
         {filteredBillings.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
+          <div className="p-7 text-center space-y-3">
             <Receipt className="w-10 h-10 text-slate-300 mx-auto" />
             <h3 className="text-sm font-bold text-slate-700">No Billing Records Found</h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
@@ -992,7 +1224,7 @@ export const AdminFinances: React.FC = () => {
                       </td>
 
                       {/* Total Charges */}
-                      <td className="py-4 px-4 align-top space-y-1">
+                      <td className="py-4 px-4 align-top space-y-1 tabular-nums">
                         <div className="text-sm font-extrabold text-slate-900">
                           ₹{bill.totalCharges.toLocaleString('en-IN')}
                         </div>
@@ -1007,7 +1239,7 @@ export const AdminFinances: React.FC = () => {
                       </td>
 
                       {/* Collected / Due */}
-                      <td className="py-4 px-4 align-top space-y-1.5 min-w-[150px]">
+                      <td className="py-4 px-4 align-top space-y-1.5 min-w-[155px] tabular-nums">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-bold text-emerald-700">
                             Paid: ₹{bill.amountPaid.toLocaleString('en-IN')}
@@ -1046,7 +1278,7 @@ export const AdminFinances: React.FC = () => {
                       {/* Status */}
                       <td className="py-4 px-4 align-top">
                         <span
-                          className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                          className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold border whitespace-nowrap ${
                             bill.status === 'COMPLETED'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : bill.status === 'REFUNDED'
@@ -1067,10 +1299,10 @@ export const AdminFinances: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => openAddMoney(bill)}
-                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] rounded-lg transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] rounded-lg transition-colors inline-flex items-center gap-1 shadow-2xs cursor-pointer whitespace-nowrap shrink-0"
                             title="Collect payment / Add money"
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-3 h-3 shrink-0" />
                             <span>Add Money</span>
                           </button>
 
@@ -1078,10 +1310,10 @@ export const AdminFinances: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => openEditDuration(bill)}
-                            className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-[11px] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-[11px] rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
                             title="Edit care duration dates & rates"
                           >
-                            <Edit3 className="w-3 h-3 text-slate-500" />
+                            <Edit3 className="w-3 h-3 text-slate-500 shrink-0" />
                             <span>Edit Duration</span>
                           </button>
 
@@ -1089,10 +1321,10 @@ export const AdminFinances: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => openExtend(bill)}
-                            className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-[#0e6b5c] font-semibold text-[11px] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-[#0e6b5c] font-semibold text-[11px] rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
                             title="Extend care duration"
                           >
-                            <Calendar className="w-3 h-3 text-[#0f8672]" />
+                            <Calendar className="w-3 h-3 text-[#0f8672] shrink-0" />
                             <span>Extend Duration</span>
                           </button>
 
@@ -1100,10 +1332,10 @@ export const AdminFinances: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => openRefund(bill)}
-                            className="px-2 py-1 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-rose-600 font-semibold text-[11px] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                            className="px-2 py-1 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-rose-600 font-semibold text-[11px] rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
                             title="Issue partial or full refund"
                           >
-                            <RotateCcw className="w-3 h-3" />
+                            <RotateCcw className="w-3 h-3 shrink-0" />
                             <span>Refund</span>
                           </button>
 
@@ -1111,7 +1343,7 @@ export const AdminFinances: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setSelectedBillingForStatement(bill)}
-                            className="p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            className="p-1 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
                             title="View detailed billing statement & receipts"
                           >
                             <Receipt className="w-4 h-4" />
@@ -1133,9 +1365,9 @@ export const AdminFinances: React.FC = () => {
       {/* MODAL 1: ADD NEW BILLING ACCOUNT */}
       {/* ========================================================================= */}
       {isAddBillingOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#0f8672] flex items-center justify-center">
                   <Receipt className="w-5 h-5" />
@@ -1154,7 +1386,7 @@ export const AdminFinances: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateBilling} className="space-y-4 text-xs">
+            <form onSubmit={handleCreateBilling} className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-xs">
               {/* PATIENT SEARCH & PROFILE PREVIEW SELECTOR */}
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
@@ -1534,9 +1766,9 @@ export const AdminFinances: React.FC = () => {
       {/* MODAL 2: ADD MONEY / COLLECT PAYMENT */}
       {/* ========================================================================= */}
       {selectedBillingForPayment && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
                   ₹
@@ -1549,91 +1781,93 @@ export const AdminFinances: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedBillingForPayment(null)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg"
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-              <span className="text-slate-500">Current Balance Due:</span>
-              <span className="font-extrabold text-amber-700 text-sm">
-                ₹{selectedBillingForPayment.balanceDue.toLocaleString('en-IN')}
-              </span>
+            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                <span className="text-slate-500">Current Balance Due:</span>
+                <span className="font-extrabold text-amber-700 text-sm tabular-nums">
+                  ₹{selectedBillingForPayment.balanceDue.toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              <form onSubmit={handleSavePayment} className="space-y-3.5 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Payment Amount (₹) <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    placeholder="0"
+                    value={payAmount === 0 ? '' : payAmount}
+                    onFocus={(e) => {
+                      if (e.target.value === '0') e.target.value = '';
+                      else e.target.select();
+                    }}
+                    onChange={(e) => setPayAmount(e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900 tabular-nums"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Payment Mode</label>
+                  <select
+                    value={payMode}
+                    onChange={(e) => setPayMode(e.target.value as PaymentMode)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  >
+                    <option value="UPI">UPI / QR Payment</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Bank Transfer">Bank Transfer (NEFT/IMPS)</option>
+                    <option value="Credit/Debit Card">Credit/Debit Card</option>
+                    <option value="Cheque">Cheque</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Transaction Ref / UTR / Note</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UPI-99881122 or Cash Slip #22"
+                    value={payTxnRef}
+                    onChange={(e) => setPayTxnRef(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Received By</label>
+                  <input
+                    type="text"
+                    value={payReceivedBy}
+                    onChange={(e) => setPayReceivedBy(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBillingForPayment(null)}
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs cursor-pointer"
+                  >
+                    Record & Generate Receipt
+                  </button>
+                </div>
+              </form>
             </div>
-
-            <form onSubmit={handleSavePayment} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Payment Amount (₹) <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  required
-                  placeholder="0"
-                  value={payAmount === 0 ? '' : payAmount}
-                  onFocus={(e) => {
-                    if (e.target.value === '0') e.target.value = '';
-                    else e.target.select();
-                  }}
-                  onChange={(e) => setPayAmount(e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0))}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Payment Mode</label>
-                <select
-                  value={payMode}
-                  onChange={(e) => setPayMode(e.target.value as PaymentMode)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                >
-                  <option value="UPI">UPI / QR Payment</option>
-                  <option value="Cash">Cash</option>
-                  <option value="Bank Transfer">Bank Transfer (NEFT/IMPS)</option>
-                  <option value="Credit/Debit Card">Credit/Debit Card</option>
-                  <option value="Cheque">Cheque</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Transaction Ref / UTR / Note</label>
-                <input
-                  type="text"
-                  placeholder="e.g. UPI-99881122 or Cash Slip #22"
-                  value={payTxnRef}
-                  onChange={(e) => setPayTxnRef(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Received By</label>
-                <input
-                  type="text"
-                  value={payReceivedBy}
-                  onChange={(e) => setPayReceivedBy(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedBillingForPayment(null)}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-xs"
-                >
-                  Record & Generate Receipt
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
@@ -1642,9 +1876,9 @@ export const AdminFinances: React.FC = () => {
       {/* MODAL 3: EDIT DURATION */}
       {/* ========================================================================= */}
       {selectedBillingForEditDuration && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0f8672] flex items-center justify-center">
                   <Edit3 className="w-4 h-4" />
@@ -1657,13 +1891,13 @@ export const AdminFinances: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedBillingForEditDuration(null)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg"
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEditDuration} className="space-y-3.5 text-xs">
+            <form onSubmit={handleSaveEditDuration} className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Start Date</label>
@@ -1769,121 +2003,200 @@ export const AdminFinances: React.FC = () => {
       {/* MODAL 4: EXTEND DURATION */}
       {/* ========================================================================= */}
       {selectedBillingForExtend && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0f8672] flex items-center justify-center">
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">Extend Care Duration</h3>
-                  <p className="text-xs text-slate-500">Patient: {selectedBillingForExtend.patientName}</p>
+                  <p className="text-xs text-slate-500">
+                    Patient: {selectedBillingForExtend.patientName} · Status: <strong>{selectedBillingForExtend.status}</strong>
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedBillingForExtend(null)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg"
+                onClick={() => {
+                  setSelectedBillingForExtend(null);
+                  setIsExtendReactivateConfirmOpen(false);
+                }}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
-              <div className="flex justify-between text-slate-600">
-                <span>Current End Date:</span>
-                <span className="font-bold text-slate-900">{selectedBillingForExtend.endDate}</span>
+            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                <div className="flex justify-between text-slate-600">
+                  <span>Current End Date:</span>
+                  <span className="font-bold text-slate-900 tabular-nums">{selectedBillingForExtend.endDate}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Current Total Days:</span>
+                  <span className="font-bold text-slate-900 tabular-nums">{selectedBillingForExtend.totalDays} Days</span>
+                </div>
               </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Current Total Days:</span>
-                <span className="font-bold text-slate-900">{selectedBillingForExtend.totalDays} Days</span>
+
+              {selectedBillingForExtend.status === 'COMPLETED' && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span>
+                    This service is currently marked <strong>COMPLETED</strong>. Extending it will prompt you to reactivate the billing and linked enquiry back to <strong>Active</strong>.
+                  </span>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveExtend} className="space-y-3.5 text-xs">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Add Extra Days <span className="text-rose-600">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      required
+                      placeholder="1"
+                      value={extendDays === 0 ? '' : extendDays}
+                      onFocus={(e) => {
+                        if (e.target.value === '0') e.target.value = '';
+                        else e.target.select();
+                      }}
+                      onChange={(e) => {
+                        const days = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
+                        setExtendDays(days);
+                        setExtendCharges(days * selectedBillingForExtend.dailyRate);
+                      }}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold tabular-nums"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Additional Charges (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      required
+                      placeholder="0"
+                      value={extendCharges === 0 ? '' : extendCharges}
+                      onFocus={(e) => {
+                        if (e.target.value === '0') e.target.value = '';
+                        else e.target.select();
+                      }}
+                      onChange={(e) => setExtendCharges(e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold tabular-nums"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Extension Reason</label>
+                  <input
+                    type="text"
+                    required
+                    value={extendReason}
+                    onChange={(e) => setExtendReason(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Authorized By</label>
+                  <input
+                    type="text"
+                    required
+                    value={extendAuthorizedBy}
+                    onChange={(e) => setExtendAuthorizedBy(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBillingForExtend(null)}
+                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-[#0f8672] hover:bg-[#0e6b5c] text-white font-semibold rounded-xl shadow-xs cursor-pointer"
+                  >
+                    Confirm Extension (+{extendDays} Days)
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 4B: CONFIRM REACTIVATION OF COMPLETED SERVICE */}
+      {/* ========================================================================= */}
+      {selectedBillingForExtend && isExtendReactivateConfirmOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[60] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-teal-50 text-[#0f8672] flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm">Reactivate Completed Service?</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsExtendReactivateConfirmOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-3 text-xs text-slate-600 leading-relaxed">
+              <p>
+                <strong>{selectedBillingForExtend.patientName}</strong>&apos;s care record is currently marked as{' '}
+                <span className="font-bold text-emerald-700">COMPLETED</span>.
+              </p>
+              <div className="p-3 bg-teal-50/70 border border-teal-200 rounded-xl text-teal-950 space-y-1">
+                <div className="font-bold text-[11px] uppercase tracking-wider text-[#0e6b5c]">
+                  Confirming this extension will:
+                </div>
+                <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
+                  <li>Add <strong>+{extendDays} days</strong> (+₹{extendCharges.toLocaleString('en-IN')}) to billing</li>
+                  <li>Change Billing status from <strong>COMPLETED</strong> back to <strong>ACTIVE</strong></li>
+                  <li>Move the linked Patient Enquiry back to <strong>CONFIRMED (Active)</strong></li>
+                </ul>
               </div>
             </div>
 
-            <form onSubmit={handleSaveExtend} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Add Extra Days <span className="text-rose-600">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    placeholder="1"
-                    value={extendDays === 0 ? '' : extendDays}
-                    onFocus={(e) => {
-                      if (e.target.value === '0') e.target.value = '';
-                      else e.target.select();
-                    }}
-                    onChange={(e) => {
-                      const days = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
-                      setExtendDays(days);
-                      setExtendCharges(days * selectedBillingForExtend.dailyRate);
-                    }}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Additional Charges (₹)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    required
-                    placeholder="0"
-                    value={extendCharges === 0 ? '' : extendCharges}
-                    onFocus={(e) => {
-                      if (e.target.value === '0') e.target.value = '';
-                      else e.target.select();
-                    }}
-                    onChange={(e) => setExtendCharges(e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0))}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Extension Reason</label>
-                <input
-                  type="text"
-                  required
-                  value={extendReason}
-                  onChange={(e) => setExtendReason(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Authorized By</label>
-                <input
-                  type="text"
-                  required
-                  value={extendAuthorizedBy}
-                  onChange={(e) => setExtendAuthorizedBy(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedBillingForExtend(null)}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#0f8672] hover:bg-[#0e6b5c] text-white font-semibold rounded-xl shadow-xs"
-                >
-                  Confirm Extension (+{extendDays} Days)
-                </button>
-              </div>
-            </form>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsExtendReactivateConfirmOpen(false)}
+                className="px-3.5 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => commitExtend(true)}
+                className="px-4 py-2 bg-[#0f8672] hover:bg-[#0e6b5c] text-white text-xs font-semibold rounded-xl shadow-xs cursor-pointer"
+              >
+                Yes, Extend & Reactivate to Active
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1891,127 +2204,188 @@ export const AdminFinances: React.FC = () => {
       {/* ========================================================================= */}
       {/* MODAL 5: REFUND */}
       {/* ========================================================================= */}
-      {selectedBillingForRefund && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center">
-                  <RotateCcw className="w-4 h-4" />
+      {selectedBillingForRefund && (() => {
+        const maxRefundable = Math.max(
+          0,
+          (selectedBillingForRefund.amountPaid || 0) - (selectedBillingForRefund.totalRefunded || 0)
+        );
+        const isAmountInvalid = maxRefundable <= 0 || refundAmount <= 0 || refundAmount > maxRefundable;
+        const projectedTotalRefunded = (selectedBillingForRefund.totalRefunded || 0) + Math.min(refundAmount, maxRefundable);
+        const willBecomeRefunded = refundSettleDue || projectedTotalRefunded >= (selectedBillingForRefund.amountPaid || 0);
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+              <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center">
+                    <RotateCcw className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">Issue Patient Refund</h3>
+                    <p className="text-xs text-slate-500">Patient: {selectedBillingForRefund.patientName}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Issue Patient Refund</h3>
-                  <p className="text-xs text-slate-500">Patient: {selectedBillingForRefund.patientName}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedBillingForRefund(null)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-200 text-xs space-y-1">
-              <div className="flex justify-between text-slate-600">
-                <span>Total Amount Paid:</span>
-                <span className="font-bold text-slate-900">
-                  ₹{selectedBillingForRefund.amountPaid.toLocaleString('en-IN')}
-                </span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Already Refunded:</span>
-                <span className="font-bold text-rose-700">
-                  ₹{(selectedBillingForRefund.totalRefunded || 0).toLocaleString('en-IN')}
-                </span>
-              </div>
-            </div>
-
-            <form onSubmit={handleSaveRefund} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Refund Amount (₹) <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  required
-                  placeholder="0"
-                  value={refundAmount === 0 ? '' : refundAmount}
-                  onFocus={(e) => {
-                    if (e.target.value === '0') e.target.value = '';
-                    else e.target.select();
-                  }}
-                  onChange={(e) => setRefundAmount(e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0))}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm text-rose-700"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Refund Channel / Mode</label>
-                <select
-                  value={refundMode}
-                  onChange={(e) => setRefundMode(e.target.value as any)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                >
-                  <option value="UPI">UPI Refund</option>
-                  <option value="Bank Transfer">Bank Transfer (NEFT/RTGS)</option>
-                  <option value="Cash">Cash Handover</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Reason for Refund</label>
-                <input
-                  type="text"
-                  required
-                  value={refundReason}
-                  onChange={(e) => setRefundReason(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Bank UTR / Transaction Ref</label>
-                <input
-                  type="text"
-                  placeholder="e.g. UTR-REF-99210"
-                  value={refundTxnRef}
-                  onChange={(e) => setRefundTxnRef(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Processed By</label>
-                <input
-                  type="text"
-                  value={refundProcessedBy}
-                  onChange={(e) => setRefundProcessedBy(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setSelectedBillingForRefund(null)}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl"
+                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow-xs"
-                >
-                  Process Refund
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-            </form>
+
+              <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
+                <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-200 text-xs space-y-1.5">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Total Amount Paid:</span>
+                    <span className="font-bold text-slate-900 tabular-nums">
+                      ₹{selectedBillingForRefund.amountPaid.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Already Refunded:</span>
+                    <span className="font-bold text-rose-700 tabular-nums">
+                      ₹{(selectedBillingForRefund.totalRefunded || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="pt-1.5 border-t border-rose-200/80 flex justify-between text-slate-800">
+                    <span className="font-bold">Max Refundable Balance:</span>
+                    <span className="font-extrabold text-emerald-700 tabular-nums">
+                      ₹{maxRefundable.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+
+                {maxRefundable <= 0 ? (
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
+                    The entire paid amount (₹{selectedBillingForRefund.amountPaid.toLocaleString('en-IN')}) has already been refunded. No refundable balance remains.
+                  </div>
+                ) : (
+                  <form onSubmit={handleSaveRefund} className="space-y-3.5 text-xs">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold text-slate-700">
+                          Refund Amount (₹) <span className="text-rose-600">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setRefundAmount(maxRefundable)}
+                          className="text-[11px] font-semibold text-[#0f8672] hover:underline cursor-pointer"
+                        >
+                          Use Max (₹{maxRefundable.toLocaleString('en-IN')})
+                        </button>
+                      </div>
+                      <input
+                        type="number"
+                        min={1}
+                        max={maxRefundable}
+                        required
+                        placeholder="0"
+                        value={refundAmount === 0 ? '' : refundAmount}
+                        onFocus={(e) => {
+                          if (e.target.value === '0') e.target.value = '';
+                          else e.target.select();
+                        }}
+                        onChange={(e) => setRefundAmount(e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                        className={`w-full p-2.5 bg-slate-50 border rounded-xl font-bold text-sm text-rose-700 tabular-nums ${
+                          refundAmount > maxRefundable ? 'border-rose-400 bg-rose-50/40' : 'border-slate-200'
+                        }`}
+                      />
+                      {refundAmount > maxRefundable && (
+                        <p className="text-[11px] text-rose-600 font-semibold mt-1">
+                          Refund cannot exceed refundable balance of ₹{maxRefundable.toLocaleString('en-IN')}.
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Refund Channel / Mode</label>
+                      <select
+                        value={refundMode}
+                        onChange={(e) => setRefundMode(e.target.value as any)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                      >
+                        <option value="UPI">UPI Refund</option>
+                        <option value="Bank Transfer">Bank Transfer (NEFT/RTGS)</option>
+                        <option value="Cash">Cash Handover</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Reason for Refund</label>
+                      <input
+                        type="text"
+                        required
+                        value={refundReason}
+                        onChange={(e) => setRefundReason(e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Bank UTR / Transaction Ref</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. UTR-REF-99210"
+                        value={refundTxnRef}
+                        onChange={(e) => setRefundTxnRef(e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Processed By</label>
+                      <input
+                        type="text"
+                        value={refundProcessedBy}
+                        onChange={(e) => setRefundProcessedBy(e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                      />
+                    </div>
+
+                    <label className="flex items-start gap-2.5 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100/70 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={refundSettleDue}
+                        onChange={(e) => setRefundSettleDue(e.target.checked)}
+                        className="mt-0.5 rounded border-slate-300 text-[#0f8672] focus:ring-[#0f8672]"
+                      />
+                      <span className="text-[11px] text-slate-700 leading-snug">
+                        <strong>Early Discharge / Final Settlement:</strong> Waive remaining due (₹{(selectedBillingForRefund.balanceDue || 0).toLocaleString('en-IN')}) and mark billing status as <strong>REFUNDED</strong>.
+                      </span>
+                    </label>
+
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500">Resulting Account Status:</span>
+                      <span className={`font-bold px-2 py-0.5 rounded ${willBecomeRefunded ? 'bg-rose-100 text-rose-700' : 'bg-teal-100 text-[#0e6b5c]'}`}>
+                        {willBecomeRefunded ? 'REFUNDED' : selectedBillingForRefund.status}
+                      </span>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBillingForRefund(null)}
+                        className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isAmountInvalid}
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-xs cursor-pointer"
+                      >
+                        Process Refund
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================================= */}
       {/* MODAL 6: DETAILED STATEMENT / INVOICE PREVIEW & PRINT */}

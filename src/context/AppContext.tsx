@@ -25,7 +25,9 @@ import {
   PaymentRecord,
   RefundRecord,
   DurationExtension,
-  StaffLoginRole
+  StaffLoginRole,
+  ActivityLogEntry,
+  ActivityLogCategory
 } from '../types';
 import {
   INITIAL_ENQUIRIES,
@@ -36,7 +38,13 @@ import {
   INITIAL_SETTINGS,
   INITIAL_ADMIN_USERS,
   INITIAL_STAFF_RECORDS,
-  INITIAL_BILLINGS
+  INITIAL_BILLINGS,
+  INITIAL_CONTACT_MESSAGES,
+  INITIAL_ACTIVITY_LOGS,
+  SAMPLE_DOC_CARE_PLAN_PDF,
+  SAMPLE_DOC_DISCHARGE_PDF,
+  SAMPLE_DOC_RX_IMAGE,
+  SAMPLE_DOC_COUNCIL_CERT
 } from '../data/seedData';
 
 export const DEFAULT_FORM_FIELDS: FormFieldConfig[] = [
@@ -223,16 +231,22 @@ interface AppContextType {
       additionalCharges: number;
       reason: string;
       authorizedBy: string;
+      reactivateCompleted?: boolean;
     }
   ) => void;
   processRefund: (
     billingId: string,
-    refund: Omit<RefundRecord, 'id' | 'refundedAt'>
+    refund: Omit<RefundRecord, 'id' | 'refundedAt'> & { settleRemainingDue?: boolean }
   ) => void;
 
   // Contact Messages
   contactMessages: ContactMessage[];
   addContactMessage: (msg: Omit<ContactMessage, 'id' | 'createdAt'>) => string;
+  updateContactMessage: (id: string, updates: Partial<ContactMessage>) => void;
+  deleteContactMessage: (id: string) => void;
+
+  // System Activity & Audit Logs
+  activityLogs: ActivityLogEntry[];
 
   // Toasts
   toasts: ToastMessage[];
@@ -257,7 +271,8 @@ const STORAGE_KEYS = {
   CURRENT_ADMIN: 'nursecare_current_admin_v2',
   STAFF_RECORDS: 'nursecare_staff_records_v1',
   CONTACT_MESSAGES: 'nursecare_contact_messages_v1',
-  BILLINGS: 'nursecare_billings_v1'
+  BILLINGS: 'nursecare_billings_v1',
+  ACTIVITY_LOGS: 'nursecare_activity_logs_v1'
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -314,10 +329,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  const sanitizeDoc = (doc: Document): Document => {
+    if (!doc.fileUrl || doc.fileUrl.startsWith('#mock')) {
+      const nameLower = (doc.name || '').toLowerCase();
+      if (nameLower.includes('taylor') || nameLower.includes('care_plan') || nameLower.includes('plan')) {
+        return { ...doc, fileUrl: SAMPLE_DOC_CARE_PLAN_PDF, fileType: 'pdf' };
+      }
+      if (nameLower.includes('patel') || nameLower.includes('discharge')) {
+        return { ...doc, fileUrl: SAMPLE_DOC_DISCHARGE_PDF, fileType: 'pdf' };
+      }
+      if (nameLower.includes('wilson') || nameLower.includes('rx') || nameLower.includes('pulmonologist')) {
+        return { ...doc, fileUrl: SAMPLE_DOC_RX_IMAGE, fileType: 'svg' };
+      }
+      return { ...doc, fileUrl: SAMPLE_DOC_COUNCIL_CERT, fileType: 'svg' };
+    }
+    return doc;
+  };
+
   const [enquiries, setEnquiries] = useState<Enquiry[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.ENQUIRIES);
-      return stored ? JSON.parse(stored) : INITIAL_ENQUIRIES;
+      const parsed: Enquiry[] = stored ? JSON.parse(stored) : INITIAL_ENQUIRIES;
+      return parsed.map((e) => ({
+        ...e,
+        documents: (e.documents || []).map(sanitizeDoc)
+      }));
     } catch {
       return INITIAL_ENQUIRIES;
     }
@@ -326,7 +362,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [nurses, setNurses] = useState<Nurse[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.NURSES);
-      return stored ? JSON.parse(stored) : INITIAL_NURSES;
+      const parsed: Nurse[] = stored ? JSON.parse(stored) : INITIAL_NURSES;
+      return parsed.map((n) => ({
+        ...n,
+        documents: (n.documents || []).map(sanitizeDoc)
+      }));
     } catch {
       return INITIAL_NURSES;
     }
@@ -363,7 +403,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [staffRecords, setStaffRecords] = useState<StaffRecord[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.STAFF_RECORDS);
-      return stored ? JSON.parse(stored) : INITIAL_STAFF_RECORDS;
+      const parsed: StaffRecord[] = stored ? JSON.parse(stored) : INITIAL_STAFF_RECORDS;
+      return parsed.map((s) => ({
+        ...s,
+        documents: (s.documents || []).map(sanitizeDoc)
+      }));
     } catch {
       return INITIAL_STAFF_RECORDS;
     }
@@ -372,9 +416,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.CONTACT_MESSAGES);
-      return stored ? JSON.parse(stored) : [];
+      if (stored !== null) {
+        const parsed: ContactMessage[] = JSON.parse(stored);
+        return parsed.map((m) => ({
+          ...m,
+          status: m.status || 'NEW'
+        }));
+      }
+      return INITIAL_CONTACT_MESSAGES;
     } catch {
-      return [];
+      return INITIAL_CONTACT_MESSAGES;
     }
   });
 
@@ -395,7 +446,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.ACTIVITY_LOGS);
+      return stored ? JSON.parse(stored) : INITIAL_ACTIVITY_LOGS;
+    } catch {
+      return INITIAL_ACTIVITY_LOGS;
+    }
+  });
+
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const currentAdminUserRef = React.useRef<AdminUser | null>(currentAdminUser);
+  const isAdminLoggedInRef = React.useRef<boolean>(isAdminLoggedIn);
+
+  useEffect(() => {
+    currentAdminUserRef.current = currentAdminUser;
+  }, [currentAdminUser]);
+
+  useEffect(() => {
+    isAdminLoggedInRef.current = isAdminLoggedIn;
+  }, [isAdminLoggedIn]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -482,6 +553,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [billings]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(activityLogs));
+    } catch (e) {
+      console.warn('Failed to save activity logs:', e);
+    }
+  }, [activityLogs]);
+
+  const recordActivity = (params: {
+    action: string;
+    category: ActivityLogCategory;
+    targetType?: string;
+    targetId?: string;
+    details: string;
+    actorOverride?: AdminUser | null;
+  }) => {
+    const actor =
+      params.actorOverride !== undefined
+        ? params.actorOverride
+        : isAdminLoggedInRef.current
+        ? currentAdminUserRef.current
+        : null;
+
+    const entry: ActivityLogEntry = {
+      id: 'log-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      actorId: actor ? actor.id : 'public',
+      actorName: actor ? actor.fullName : 'Public Visitor',
+      actorEmail: actor ? actor.email : 'website-intake',
+      actorRole: actor ? actor.role : 'PUBLIC',
+      action: params.action,
+      category: params.category,
+      targetType: params.targetType,
+      targetId: params.targetId,
+      details: params.details,
+      timestamp: new Date().toISOString()
+    };
+
+    setActivityLogs((prev) => [entry, ...prev].slice(0, 500));
+  };
+
   // Toast dispatch
   const addToast = (title: string, message: string, type: ToastMessage['type'] = 'info') => {
     const id = 'toast-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
@@ -506,6 +617,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...(newSettings.socialLinks || {})
       }
     }));
+    recordActivity({
+      action: 'Updated Site Settings',
+      category: 'SETTINGS',
+      targetType: 'SiteSettings',
+      details: 'Updated public clinic branding, contact channels, or SEO defaults.'
+    });
     addToast('Settings Updated', 'Public website updated immediately.', 'success');
   };
 
@@ -529,18 +646,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setEnquiries((prev) => [newEnquiry, ...prev]);
+    recordActivity({
+      action: 'Created Patient Enquiry',
+      category: 'ENQUIRY',
+      targetType: 'Enquiry',
+      targetId: newId,
+      details: `Created patient care enquiry #${newId} for ${enquiryData.fullName} (${enquiryData.cityArea}).`
+    });
     return newId;
   };
 
   const updateEnquiry = (id: string, updates: Partial<Enquiry>) => {
+    const target = enquiries.find((item) => item.id === id);
     setEnquiries((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
     );
+    recordActivity({
+      action: 'Updated Enquiry Details',
+      category: 'ENQUIRY',
+      targetType: 'Enquiry',
+      targetId: id,
+      details: `Edited profile or clinical fields for ${target?.fullName || id}.`
+    });
     addToast('Enquiry Updated', 'Record details updated successfully.', 'success');
   };
 
   const updateEnquiryStage = (id: string, newStage: EnquiryStage, note?: string) => {
     const nowIso = new Date().toISOString();
+    const target = enquiries.find((item) => item.id === id);
     setEnquiries((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
@@ -562,6 +695,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    recordActivity({
+      action: 'Changed Enquiry Stage',
+      category: 'ENQUIRY',
+      targetType: 'Enquiry',
+      targetId: id,
+      details: `Moved ${target?.fullName || id} from ${target?.stage || 'unknown'} to ${newStage}.${note ? ` Note: ${note}` : ''}`
+    });
     addToast('Stage Updated', `Enquiry moved to ${newStage}.`, 'info');
   };
 
@@ -607,22 +747,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
+    const targetEnq = enquiries.find((item) => item.id === enquiryId);
+    const assignedNurseObj = nurseId ? nurses.find((n) => n.id === nurseId) : null;
     if (nurseId) {
+      recordActivity({
+        action: 'Assigned Nurse to Enquiry',
+        category: 'ENQUIRY',
+        targetType: 'Enquiry',
+        targetId: enquiryId,
+        details: `Assigned ${assignedNurseObj?.fullName || nurseId} to ${targetEnq?.fullName || enquiryId} (Stage set to CONFIRMED).`
+      });
       addToast('Nurse Assigned', 'Stage automatically set to CONFIRMED.', 'success');
     } else {
+      recordActivity({
+        action: 'Unassigned Nurse from Enquiry',
+        category: 'ENQUIRY',
+        targetType: 'Enquiry',
+        targetId: enquiryId,
+        details: `Removed nurse assignment for ${targetEnq?.fullName || enquiryId} (Reverted to CONTACTED).`
+      });
       addToast('Nurse Removed', 'Stage reverted to CONTACTED.', 'info');
     }
   };
 
   const updateEnquiryNotes = (enquiryId: string, notes: string) => {
+    const target = enquiries.find((item) => item.id === enquiryId);
     setEnquiries((prev) =>
       prev.map((item) => (item.id === enquiryId ? { ...item, notes } : item))
     );
+    recordActivity({
+      action: 'Updated Enquiry Clinical Notes',
+      category: 'ENQUIRY',
+      targetType: 'Enquiry',
+      targetId: enquiryId,
+      details: `Saved clinical triage notes for ${target?.fullName || enquiryId}.`
+    });
     addToast('Note Saved', 'Private clinical notes saved.', 'info');
   };
 
   const deleteEnquiry = (enquiryId: string) => {
+    const target = enquiries.find((item) => item.id === enquiryId);
     setEnquiries((prev) => prev.filter((item) => item.id !== enquiryId));
+    recordActivity({
+      action: 'Deleted Patient Enquiry',
+      category: 'ENQUIRY',
+      targetType: 'Enquiry',
+      targetId: enquiryId,
+      details: `Permanently removed enquiry record for ${target?.fullName || enquiryId}.`
+    });
     addToast('Enquiry Deleted', 'Record has been removed.', 'warning');
   };
 
@@ -630,6 +802,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (enquiryIds.length === 0) return;
     const set = new Set(enquiryIds);
     setEnquiries((prev) => prev.filter((item) => !set.has(item.id)));
+    recordActivity({
+      action: 'Bulk Deleted Enquiries',
+      category: 'ENQUIRY',
+      targetType: 'Enquiry',
+      details: `Removed ${enquiryIds.length} enquiry record(s) in bulk.`
+    });
     addToast('Bulk Deletion Complete', `${enquiryIds.length} enquiries have been permanently removed.`, 'warning');
   };
 
@@ -654,6 +832,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    recordActivity({
+      action: 'Bulk Updated Enquiry Stages',
+      category: 'ENQUIRY',
+      targetType: 'Enquiry',
+      details: `Updated ${enquiryIds.length} enquiry record(s) to stage ${newStage}.`
+    });
     addToast('Bulk Stage Updated', `${enquiryIds.length} enquiries marked as ${newStage}.`, 'success');
   };
 
@@ -663,6 +847,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ) => {
     const docId = 'doc-' + Date.now();
     const nowIso = new Date().toISOString();
+    const target = enquiries.find((item) => item.id === enquiryId);
     const newDoc: Document = {
       ...docData,
       id: docId,
@@ -679,10 +864,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    recordActivity({
+      action: 'Uploaded Patient Document',
+      category: 'ENQUIRY',
+      targetType: 'Enquiry',
+      targetId: enquiryId,
+      details: `Attached document "${docData.name}" to ${target?.fullName || enquiryId}.`
+    });
     addToast('Document Uploaded', `${docData.name} attached securely.`, 'success');
   };
 
   const deleteDocumentFromEnquiry = (enquiryId: string, documentId: string) => {
+    const target = enquiries.find((item) => item.id === enquiryId);
     setEnquiries((prev) =>
       prev.map((item) => {
         if (item.id !== enquiryId) return item;
@@ -692,6 +885,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    recordActivity({
+      action: 'Removed Patient Document',
+      category: 'ENQUIRY',
+      targetType: 'Enquiry',
+      targetId: enquiryId,
+      details: `Deleted document #${documentId} from ${target?.fullName || enquiryId}.`
+    });
     addToast('Document Deleted', 'Document file removed.', 'warning');
   };
 
@@ -704,26 +904,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString()
     };
     setNurses((prev) => [newNurse, ...prev]);
+    recordActivity({
+      action: 'Registered Nurse Profile',
+      category: 'NURSE',
+      targetType: 'Nurse',
+      targetId: id,
+      details: `Added ${nurseData.fullName} (${nurseData.qualification}, ${nurseData.city}) with status ${nurseData.status}.`
+    });
     return id;
   };
 
   const updateNurse = (id: string, updates: Partial<Nurse>) => {
+    const target = nurses.find((item) => item.id === id);
     setNurses((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
     );
+    recordActivity({
+      action: 'Updated Nurse Profile',
+      category: 'NURSE',
+      targetType: 'Nurse',
+      targetId: id,
+      details: `Modified roster profile for ${target?.fullName || id}.`
+    });
     addToast('Nurse Updated', 'Nurse profile updated.', 'success');
   };
 
   const updateNurseStatus = (id: string, status: NurseStatus) => {
+    const target = nurses.find((item) => item.id === id);
     setNurses((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status } : item))
     );
+    recordActivity({
+      action: 'Changed Nurse Status',
+      category: 'NURSE',
+      targetType: 'Nurse',
+      targetId: id,
+      details: `Set ${target?.fullName || id} roster status to ${status}.`
+    });
     addToast('Status Changed', `Nurse status set to ${status}.`, 'info');
   };
 
   const deleteNurse = (id: string) => {
-    // If nurse is currently assigned to any enquiry, warn or decouple
+    const target = nurses.find((item) => item.id === id);
     setNurses((prev) => prev.filter((item) => item.id !== id));
+    recordActivity({
+      action: 'Removed Nurse from Roster',
+      category: 'NURSE',
+      targetType: 'Nurse',
+      targetId: id,
+      details: `Removed nurse ${target?.fullName || id} from registry.`
+    });
     addToast('Nurse Removed', 'Nurse record removed from roster.', 'warning');
   };
 
@@ -733,6 +963,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ) => {
     const docId = 'doc-nurse-' + Date.now();
     const nowIso = new Date().toISOString();
+    const target = nurses.find((n) => n.id === nurseId);
     const newDoc: Document = {
       ...docData,
       id: docId,
@@ -750,10 +981,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    recordActivity({
+      action: 'Uploaded Nurse Credential',
+      category: 'NURSE',
+      targetType: 'Nurse',
+      targetId: nurseId,
+      details: `Uploaded "${docData.name}" for ${target?.fullName || nurseId}.`
+    });
     addToast('Document Uploaded', `Document "${docData.name}" added to nurse credentials.`, 'success');
   };
 
   const deleteDocumentFromNurse = (nurseId: string, documentId: string) => {
+    const target = nurses.find((n) => n.id === nurseId);
     setNurses((prev) =>
       prev.map((nurse) => {
         if (nurse.id !== nurseId) return nurse;
@@ -763,6 +1002,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    recordActivity({
+      action: 'Removed Nurse Credential',
+      category: 'NURSE',
+      targetType: 'Nurse',
+      targetId: nurseId,
+      details: `Removed document #${documentId} from ${target?.fullName || nurseId}.`
+    });
     addToast('Document Deleted', 'Nurse document file removed.', 'warning');
   };
 
@@ -775,10 +1021,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString()
     };
     setReviews((prev) => [newReview, ...prev]);
+    recordActivity({
+      action: 'Submitted Review',
+      category: 'REVIEW',
+      targetType: 'Review',
+      targetId: id,
+      details: `Recorded ${reviewData.rating}-star review by ${reviewData.reviewerName} (${reviewData.status}).`
+    });
     return id;
   };
 
   const updateReviewStatus = (id: string, status: ReviewStatus, adminNote?: string) => {
+    const target = reviews.find((r) => r.id === id);
     setReviews((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
@@ -789,18 +1043,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    recordActivity({
+      action: 'Moderated Patient Review',
+      category: 'REVIEW',
+      targetType: 'Review',
+      targetId: id,
+      details: `Marked review from ${target?.reviewerName || id} as ${status}.`
+    });
     addToast('Review Status', `Review status changed to ${status}.`, 'info');
   };
 
   const updateReview = (id: string, updates: Partial<Review>) => {
+    const target = reviews.find((r) => r.id === id);
     setReviews((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
     );
+    recordActivity({
+      action: 'Edited Review Record',
+      category: 'REVIEW',
+      targetType: 'Review',
+      targetId: id,
+      details: `Updated testimonial by ${target?.reviewerName || id}.`
+    });
     addToast('Review Updated', 'Review record updated.', 'success');
   };
 
   const deleteReview = (id: string) => {
+    const target = reviews.find((r) => r.id === id);
     setReviews((prev) => prev.filter((item) => item.id !== id));
+    recordActivity({
+      action: 'Deleted Patient Review',
+      category: 'REVIEW',
+      targetType: 'Review',
+      targetId: id,
+      details: `Removed testimonial by ${target?.reviewerName || id}.`
+    });
     addToast('Review Deleted', 'Review removed.', 'warning');
   };
 
@@ -826,6 +1103,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Form Fields Customization Handlers
   const updateFormField = (id: string, updates: Partial<FormFieldConfig>) => {
+    const target = enquiryFormFields.find((f) => f.id === id);
     setEnquiryFormFields((prev) => {
       const next = prev.map((f) => (f.id === id ? { ...f, ...updates } : f));
       try {
@@ -834,6 +1112,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn('Failed to save form fields', e);
       }
       return next;
+    });
+    recordActivity({
+      action: 'Updated Enquiry Form Field',
+      category: 'SETTINGS',
+      targetType: 'FormFieldConfig',
+      targetId: id,
+      details: `Updated field "${updates.label || target?.label || id}" in public enquiry form builder.`
     });
     addToast('Form Field Updated', 'Enquiry form updated immediately.', 'info');
   };
@@ -856,11 +1141,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return next;
     });
 
+    recordActivity({
+      action: 'Added Enquiry Form Field',
+      category: 'SETTINGS',
+      targetType: 'FormFieldConfig',
+      targetId: id,
+      details: `Added custom form field "${fieldData.label}" (${fieldData.type}).`
+    });
     addToast('Field Added', `Added "${fieldData.label}" to public enquiry form.`, 'success');
     return id;
   };
 
   const removeFormField = (id: string) => {
+    const target = enquiryFormFields.find((f) => f.id === id);
     setEnquiryFormFields((prev) => {
       const next = prev.filter((f) => f.id !== id);
       try {
@@ -869,6 +1162,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn('Failed to save form fields', e);
       }
       return next;
+    });
+    recordActivity({
+      action: 'Removed Enquiry Form Field',
+      category: 'SETTINGS',
+      targetType: 'FormFieldConfig',
+      targetId: id,
+      details: `Removed field "${target?.label || id}" from public enquiry form.`
     });
     addToast('Field Removed', 'Field removed from public enquiry form.', 'warning');
   };
@@ -880,6 +1180,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('Failed to reset form fields', e);
     }
+    recordActivity({
+      action: 'Reset Enquiry Form Builder',
+      category: 'SETTINGS',
+      targetType: 'FormFieldConfig',
+      details: 'Restored public enquiry form fields to default configuration.'
+    });
     addToast('Fields Reset', 'Enquiry form restored to clinical default fields.', 'info');
   };
 
@@ -902,10 +1208,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return next;
     });
     addToast('Service Added', `"${newService.title}" added to active services catalogue.`, 'success');
+    recordActivity({
+      action: 'Added Clinical Service',
+      category: 'SERVICE',
+      targetType: 'ServiceItem',
+      targetId: newId,
+      details: `Added service "${newService.title}" to public catalog.`
+    });
     return newId;
   };
 
   const updateService = (id: string, updates: Partial<ServiceItem>) => {
+    const target = services.find((s) => s.id === id);
     setServices((prev) => {
       const next = prev.map((s) => (s.id === id ? { ...s, ...updates } : s));
       try {
@@ -915,21 +1229,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return next;
     });
+    recordActivity({
+      action: 'Updated Clinical Service',
+      category: 'SERVICE',
+      targetType: 'ServiceItem',
+      targetId: id,
+      details: `Modified service "${updates.title || target?.title || id}".`
+    });
     addToast('Service Updated', 'Service details and inclusions updated successfully.', 'success');
   };
 
   const deleteService = (id: string) => {
+    const target = services.find((s) => s.id === id);
     setServices((prev) => {
-      const target = prev.find((s) => s.id === id);
       const next = prev.filter((s) => s.id !== id);
       try {
         localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(next));
       } catch (e) {
         console.warn('Failed to delete service', e);
       }
-      addToast('Service Removed', `"${target?.title || 'Service'}" removed from active catalog.`, 'warning');
       return next;
     });
+    recordActivity({
+      action: 'Deleted Clinical Service',
+      category: 'SERVICE',
+      targetType: 'ServiceItem',
+      targetId: id,
+      details: `Removed "${target?.title || id}" from service catalog.`
+    });
+    addToast('Service Removed', `"${target?.title || 'Service'}" removed from active catalog.`, 'warning');
   };
 
   const resetServicesToDefault = () => {
@@ -939,6 +1267,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('Failed to reset services', e);
     }
+    recordActivity({
+      action: 'Reset Clinical Services',
+      category: 'SERVICE',
+      targetType: 'ServiceItem',
+      details: 'Restored services catalog to initial clinical defaults.'
+    });
     addToast('Services Reset', 'Services restored to initial defaults.', 'info');
   };
 
@@ -959,11 +1293,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return next;
     });
+    recordActivity({
+      action: 'Added Service Location',
+      category: 'SERVICE',
+      targetType: 'ServiceLocation',
+      targetId: newId,
+      details: `Added coverage zone "${newLoc.name}, ${newLoc.city}".`
+    });
     addToast('Location Added', `"${newLoc.name}" added to service coverage zones.`, 'success');
     return newId;
   };
 
   const updateLocation = (id: string, updates: Partial<ServiceLocation>) => {
+    const target = serviceLocations.find((l) => l.id === id);
     setServiceLocations((prev) => {
       const next = prev.map((l) => (l.id === id ? { ...l, ...updates } : l));
       try {
@@ -973,21 +1315,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return next;
     });
+    recordActivity({
+      action: 'Updated Service Location',
+      category: 'SERVICE',
+      targetType: 'ServiceLocation',
+      targetId: id,
+      details: `Updated coverage zone "${updates.name || target?.name || id}".`
+    });
     addToast('Coverage Updated', 'Location details and response ETA updated.', 'success');
   };
 
   const deleteLocation = (id: string) => {
+    const target = serviceLocations.find((l) => l.id === id);
     setServiceLocations((prev) => {
-      const target = prev.find((l) => l.id === id);
       const next = prev.filter((l) => l.id !== id);
       try {
         localStorage.setItem(STORAGE_KEYS.LOCATIONS, JSON.stringify(next));
       } catch (e) {
         console.warn('Failed to delete location', e);
       }
-      addToast('Location Removed', `"${target?.name || 'Location'}" removed from coverage list.`, 'warning');
       return next;
     });
+    recordActivity({
+      action: 'Deleted Service Location',
+      category: 'SERVICE',
+      targetType: 'ServiceLocation',
+      targetId: id,
+      details: `Removed coverage zone "${target?.name || id}".`
+    });
+    addToast('Location Removed', `"${target?.name || 'Location'}" removed from coverage list.`, 'warning');
   };
 
   const resetLocationsToDefault = () => {
@@ -997,6 +1353,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('Failed to reset locations', e);
     }
+    recordActivity({
+      action: 'Reset Service Locations',
+      category: 'SERVICE',
+      targetType: 'ServiceLocation',
+      details: 'Restored coverage locations to defaults.'
+    });
     addToast('Locations Reset', 'Coverage areas restored to default zones.', 'info');
   };
 
@@ -1009,24 +1371,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString()
     };
     setAdminUsers((prev) => [...prev, newUser]);
+    recordActivity({
+      action: 'Added Admin User',
+      category: 'STAFF',
+      targetType: 'AdminUser',
+      targetId: newId,
+      details: `Added ${newUser.fullName} (${newUser.role.replace('_', ' ')}).`
+    });
     addToast('Admin User Added', `${newUser.fullName} added as ${newUser.role.replace('_', ' ')}.`, 'success');
     return newId;
   };
 
   const updateAdminUser = (id: string, updates: Partial<AdminUser>) => {
+    if (currentAdminUser?.role !== 'SUPER_ADMIN' && currentAdminUser?.id !== id) {
+      addToast('Permission Denied', 'Only the Super Admin can inspect or modify another administrator account.', 'error');
+      return;
+    }
+    const target = adminUsers.find((u) => u.id === id);
     setAdminUsers((prev) =>
       prev.map((u) => {
         if (u.id === id) {
           const updated = { ...u, ...updates };
           if (currentAdminUser?.id === id) {
             setCurrentAdminUser(updated);
+            currentAdminUserRef.current = updated;
           }
           return updated;
         }
         return u;
       })
     );
-    addToast('Admin Account Updated', 'Staff credentials and role updated.', 'success');
+    recordActivity({
+      action: 'Updated Admin Account',
+      category: 'STAFF',
+      targetType: 'AdminUser',
+      targetId: id,
+      details: `Updated administrator account for ${updates.fullName || target?.fullName || id}.`
+    });
+    addToast('Admin Account Updated', 'Administrator profile and permissions updated.', 'success');
   };
 
   const deleteAdminUser = (id: string) => {
@@ -1040,6 +1422,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const target = adminUsers.find((u) => u.id === id);
     setAdminUsers((prev) => prev.filter((u) => u.id !== id));
+    recordActivity({
+      action: 'Removed Admin User',
+      category: 'STAFF',
+      targetType: 'AdminUser',
+      targetId: id,
+      details: `Removed admin account ${target?.fullName || id}.`
+    });
     addToast('Staff Member Removed', `${target?.fullName || 'User'} has been removed.`, 'warning');
   };
 
@@ -1047,8 +1436,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!currentAdminUser) return;
     const updated = { ...currentAdminUser, ...updates };
     setCurrentAdminUser(updated);
-    setAdminUsers((prev) => prev.map((u) => (u.id === currentAdminUser.id ? updated : u)));
-    addToast('Profile Saved', 'Your admin profile details have been updated.', 'success');
+    currentAdminUserRef.current = updated;
+    if (currentAdminUser.role === 'STAFF' || currentAdminUser.role === 'FINANCE') {
+      setStaffRecords((prev) =>
+        prev.map((s) =>
+          s.id === currentAdminUser.id || s.email.toLowerCase() === currentAdminUser.email.toLowerCase()
+            ? {
+                ...s,
+                fullName: updated.fullName,
+                email: updated.email,
+                phone: updated.phone ?? s.phone,
+                designation: updated.designation ?? s.designation,
+                avatarUrl: updates.avatarUrl !== undefined ? updates.avatarUrl : s.avatarUrl
+              }
+            : s
+        )
+      );
+    } else {
+      setAdminUsers((prev) => prev.map((u) => (u.id === currentAdminUser.id ? updated : u)));
+    }
+    recordActivity({
+      action: 'Updated Own Profile',
+      category: 'STAFF',
+      targetType: 'UserProfile',
+      targetId: currentAdminUser.id,
+      details: `${updated.fullName} updated personal profile details or profile picture.`,
+      actorOverride: updated
+    });
+    addToast('Profile Saved', 'Your profile details and photo have been updated.', 'success');
   };
 
   const changeAdminPassword = (oldPass: string, newPass: string): boolean => {
@@ -1063,7 +1478,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const updated = { ...currentAdminUser, password: newPass };
     setCurrentAdminUser(updated);
+    currentAdminUserRef.current = updated;
     setAdminUsers((prev) => prev.map((u) => (u.id === currentAdminUser.id ? updated : u)));
+    recordActivity({
+      action: 'Changed Account Password',
+      category: 'AUTH',
+      targetType: 'UserAccount',
+      targetId: currentAdminUser.id,
+      details: `${currentAdminUser.fullName} updated account login password.`
+    });
     addToast('Password Changed', 'Administrator password updated successfully.', 'success');
     return true;
   };
@@ -1072,11 +1495,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newId = `msg-${Date.now()}`;
     const newMsg: ContactMessage = {
       ...msgData,
+      status: msgData.status || 'NEW',
       id: newId,
       createdAt: new Date().toISOString()
     };
     setContactMessages((prev) => [newMsg, ...prev]);
+    recordActivity({
+      action: 'Submitted Contact Message',
+      category: 'CONTACT',
+      targetType: 'ContactMessage',
+      targetId: newId,
+      details: `Contact query "${msgData.subject}" received from ${msgData.fullName}.`
+    });
     return newId;
+  };
+
+  const updateContactMessage = (id: string, updates: Partial<ContactMessage>) => {
+    const nowIso = new Date().toISOString();
+    const target = contactMessages.find((m) => m.id === id);
+    setContactMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...updates, updatedAt: nowIso } : m))
+    );
+    recordActivity({
+      action: 'Updated Contact Message',
+      category: 'CONTACT',
+      targetType: 'ContactMessage',
+      targetId: id,
+      details: `Updated query from ${target?.fullName || id}${updates.status ? ` (Status: ${updates.status})` : ''}.`
+    });
+    addToast('Contact Enquiry Updated', 'Contact message status and notes saved.', 'success');
+  };
+
+  const deleteContactMessage = (id: string) => {
+    const target = contactMessages.find((m) => m.id === id);
+    setContactMessages((prev) => prev.filter((m) => m.id !== id));
+    recordActivity({
+      action: 'Deleted Contact Message',
+      category: 'CONTACT',
+      targetType: 'ContactMessage',
+      targetId: id,
+      details: `Deleted Contact Us enquiry from ${target?.fullName || id}.`
+    });
+    addToast('Message Deleted', 'Contact Us enquiry removed.', 'warning');
   };
 
   // Staff Personnel Records Actions (Management & Directory - No Login Access)
@@ -1088,20 +1548,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString()
     };
     setStaffRecords((prev) => [newRecord, ...prev]);
+    recordActivity({
+      action: 'Added Staff Record',
+      category: 'STAFF',
+      targetType: 'StaffRecord',
+      targetId: newId,
+      details: `Added ${newRecord.fullName} (${newRecord.designation}, ${newRecord.department}).`
+    });
     addToast('Staff Record Added', `${newRecord.fullName} (${newRecord.designation}) added to personnel directory.`, 'success');
     return newId;
   };
 
   const updateStaffRecord = (id: string, updates: Partial<StaffRecord>) => {
+    const target = staffRecords.find((s) => s.id === id);
     setStaffRecords((prev) =>
       prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
     );
+    recordActivity({
+      action: 'Updated Staff Record',
+      category: 'STAFF',
+      targetType: 'StaffRecord',
+      targetId: id,
+      details: `Updated personnel details for ${updates.fullName || target?.fullName || id}.`
+    });
     addToast('Staff Record Updated', 'Personnel details have been updated.', 'success');
   };
 
   const deleteStaffRecord = (id: string) => {
     const target = staffRecords.find((s) => s.id === id);
     setStaffRecords((prev) => prev.filter((s) => s.id !== id));
+    recordActivity({
+      action: 'Deleted Staff Record',
+      category: 'STAFF',
+      targetType: 'StaffRecord',
+      targetId: id,
+      details: `Removed ${target?.fullName || id} from staff directory.`
+    });
     addToast('Staff Record Removed', `${target?.fullName || 'Staff member'} removed from directory.`, 'warning');
   };
 
@@ -1111,6 +1593,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ) => {
     const docId = 'doc-staff-' + Date.now();
     const nowIso = new Date().toISOString();
+    const target = staffRecords.find((s) => s.id === staffId);
     const newDoc: Document = {
       ...docData,
       id: docId,
@@ -1128,10 +1611,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    recordActivity({
+      action: 'Uploaded Staff Document',
+      category: 'STAFF',
+      targetType: 'StaffRecord',
+      targetId: staffId,
+      details: `Uploaded "${docData.name}" for ${target?.fullName || staffId}.`
+    });
     addToast('Document Uploaded', `Document "${docData.name}" added to staff records.`, 'success');
   };
 
   const deleteDocumentFromStaff = (staffId: string, documentId: string) => {
+    const target = staffRecords.find((s) => s.id === staffId);
     setStaffRecords((prev) =>
       prev.map((staff) => {
         if (staff.id !== staffId) return staff;
@@ -1141,10 +1632,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    recordActivity({
+      action: 'Removed Staff Document',
+      category: 'STAFF',
+      targetType: 'StaffRecord',
+      targetId: staffId,
+      details: `Removed document #${documentId} from ${target?.fullName || staffId}.`
+    });
     addToast('Document Deleted', 'Staff document removed.', 'warning');
   };
 
   const toggleStaffLogin = (staffId: string, canLogin: boolean, password?: string, loginRole?: StaffLoginRole) => {
+    const target = staffRecords.find((s) => s.id === staffId);
     setStaffRecords((prev) =>
       prev.map((staff) => {
         if (staff.id !== staffId) return staff;
@@ -1156,6 +1655,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    recordActivity({
+      action: canLogin ? 'Enabled Staff Portal Login' : 'Disabled Staff Portal Login',
+      category: 'STAFF',
+      targetType: 'StaffRecord',
+      targetId: staffId,
+      details: `${canLogin ? `Enabled (${loginRole || target?.loginRole || 'STAFF'}) login` : 'Disabled portal access'} for ${target?.fullName || staffId}.`
+    });
     addToast(
       'Staff Login Access',
       canLogin
@@ -1178,19 +1684,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: nowIso
     };
     setBillings((prev) => [newBill, ...prev]);
+    recordActivity({
+      action: 'Created Billing Account',
+      category: 'FINANCE',
+      targetType: 'CareBilling',
+      targetId: id,
+      details: `Opened billing #${id} for ${data.patientName} (₹${data.totalCharges.toLocaleString('en-IN')}, ${data.totalDays} days).`
+    });
     addToast('Billing Opened', `Care billing account created for ${data.patientName}.`, 'success');
     return id;
   };
 
   const updateBilling = (id: string, updates: Partial<CareBilling>) => {
+    const target = billings.find((b) => b.id === id);
     setBillings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...updates, updatedAt: new Date().toISOString() } : b))
     );
+    recordActivity({
+      action: 'Updated Billing Account',
+      category: 'FINANCE',
+      targetType: 'CareBilling',
+      targetId: id,
+      details: `Updated billing record #${id} for ${target?.patientName || id}.`
+    });
     addToast('Billing Updated', 'Billing record saved.', 'info');
   };
 
   const deleteBilling = (id: string) => {
+    const target = billings.find((b) => b.id === id);
     setBillings((prev) => prev.filter((b) => b.id !== id));
+    recordActivity({
+      action: 'Deleted Billing Account',
+      category: 'FINANCE',
+      targetType: 'CareBilling',
+      targetId: id,
+      details: `Deleted billing account #${id} (${target?.patientName || id}).`
+    });
     addToast('Billing Deleted', 'Billing record removed.', 'warning');
   };
 
@@ -1222,6 +1751,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    const target = billings.find((b) => b.id === billingId);
+    recordActivity({
+      action: 'Recorded Patient Payment',
+      category: 'FINANCE',
+      targetType: 'CareBilling',
+      targetId: billingId,
+      details: `Recorded ₹${payment.amount.toLocaleString('en-IN')} via ${payment.paymentMode} for ${target?.patientName || billingId} (Receipt #${receiptNum}).`
+    });
     addToast('Payment Received', `₹${payment.amount.toLocaleString()} recorded. Receipt #${receiptNum}`, 'success');
   };
 
@@ -1259,6 +1796,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+    const target = billings.find((b) => b.id === billingId);
+    recordActivity({
+      action: 'Edited Billing Duration',
+      category: 'FINANCE',
+      targetType: 'CareBilling',
+      targetId: billingId,
+      details: `Adjusted duration to ${params.totalDays} days for ${target?.patientName || billingId}.`
+    });
     addToast('Duration Updated', `Duration set to ${params.totalDays} days. Charges recalculated.`, 'success');
   };
 
@@ -1269,9 +1814,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       additionalCharges: number;
       reason: string;
       authorizedBy: string;
+      reactivateCompleted?: boolean;
     }
   ) => {
     const nowIso = new Date().toISOString();
+    const targetBill = billings.find((b) => b.id === billingId);
+    const shouldReactivate = Boolean(extension.reactivateCompleted);
+
     setBillings((prev) =>
       prev.map((b) => {
         if (b.id !== billingId) return b;
@@ -1303,39 +1852,118 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           baseCareCharges: newBaseCare,
           totalCharges: newTotal,
           balanceDue: newBalance,
+          status: shouldReactivate && b.status === 'COMPLETED' ? 'ACTIVE' : b.status,
           extensions: [extRecord, ...(b.extensions || [])],
           updatedAt: nowIso
         };
       })
     );
-    addToast('Duration Extended', `Care extended by ${extension.extendedDays} days (+₹${extension.additionalCharges.toLocaleString()}).`, 'success');
+
+    if (shouldReactivate && targetBill) {
+      setEnquiries((prev) =>
+        prev.map((e) => {
+          const matchesId = targetBill.enquiryId && e.id === targetBill.enquiryId;
+          const matchesFallback =
+            !targetBill.enquiryId?.startsWith('enq-') &&
+            e.phone === targetBill.phone &&
+            e.fullName.toLowerCase() === targetBill.patientName.toLowerCase();
+          if ((matchesId || matchesFallback) && e.stage === 'COMPLETED') {
+            return {
+              ...e,
+              stage: 'CONFIRMED',
+              stageHistory: [
+                ...e.stageHistory,
+                {
+                  stage: 'CONFIRMED',
+                  timestamp: nowIso,
+                  note: `Care duration extended by ${extension.extendedDays} days (+₹${extension.additionalCharges.toLocaleString('en-IN')}). Reactivated to Active care.`
+                }
+              ]
+            };
+          }
+          return e;
+        })
+      );
+      recordActivity({
+        action: 'Extended & Reactivated Billing',
+        category: 'FINANCE',
+        targetType: 'CareBilling',
+        targetId: billingId,
+        details: `Extended ${targetBill.patientName} care by ${extension.extendedDays} days (+₹${extension.additionalCharges.toLocaleString('en-IN')}) and reactivated status.`
+      });
+      addToast(
+        'Service Extended & Reactivated',
+        `Care extended by ${extension.extendedDays} days. Billing and enquiry moved back to Active.`,
+        'success'
+      );
+    } else {
+      recordActivity({
+        action: 'Extended Billing Duration',
+        category: 'FINANCE',
+        targetType: 'CareBilling',
+        targetId: billingId,
+        details: `Extended ${targetBill?.patientName || billingId} care by ${extension.extendedDays} days (+₹${extension.additionalCharges.toLocaleString('en-IN')}).`
+      });
+      addToast(
+        'Duration Extended',
+        `Care extended by ${extension.extendedDays} days (+₹${extension.additionalCharges.toLocaleString()}).`,
+        'success'
+      );
+    }
   };
 
   const processRefund = (
     billingId: string,
-    refund: Omit<RefundRecord, 'id' | 'refundedAt'>
+    refund: Omit<RefundRecord, 'id' | 'refundedAt'> & { settleRemainingDue?: boolean }
   ) => {
+    const targetBill = billings.find((b) => b.id === billingId);
+    if (!targetBill) return;
+
+    const maxRefundable = Math.max(0, (targetBill.amountPaid || 0) - (targetBill.totalRefunded || 0));
+    const clampedAmount = Math.min(refund.amount, maxRefundable);
+    if (clampedAmount <= 0) {
+      addToast('Refund Unavailable', 'No remaining refundable amount on this billing account.', 'warning');
+      return;
+    }
+
+    const { settleRemainingDue, ...refundFields } = refund;
     const nowIso = new Date().toISOString();
     const newRefund: RefundRecord = {
-      ...refund,
+      ...refundFields,
+      amount: clampedAmount,
       id: 'ref-' + Date.now(),
       refundedAt: nowIso
     };
+
     setBillings((prev) =>
       prev.map((b) => {
         if (b.id !== billingId) return b;
         const newRefunds = [newRefund, ...(b.refunds || [])];
-        const newTotalRefunded = (b.totalRefunded || 0) + refund.amount;
+        const newTotalRefunded = (b.totalRefunded || 0) + clampedAmount;
+        const isFullyRefunded = newTotalRefunded >= (b.amountPaid || 0);
+        const shouldCloseAsRefunded = Boolean(settleRemainingDue) || isFullyRefunded;
         return {
           ...b,
           refunds: newRefunds,
           totalRefunded: newTotalRefunded,
-          status: newTotalRefunded >= b.amountPaid ? 'REFUNDED' : b.status,
+          balanceDue: settleRemainingDue ? 0 : b.balanceDue,
+          status: shouldCloseAsRefunded ? 'REFUNDED' : b.status,
           updatedAt: nowIso
         };
       })
     );
-    addToast('Refund Processed', `₹${refund.amount.toLocaleString()} refunded via ${refund.refundMode}.`, 'info');
+    recordActivity({
+      action: 'Processed Patient Refund',
+      category: 'FINANCE',
+      targetType: 'CareBilling',
+      targetId: billingId,
+      details: `Issued ₹${clampedAmount.toLocaleString('en-IN')} refund via ${refund.refundMode} for ${targetBill.patientName}${settleRemainingDue ? ' (Account closed as REFUNDED)' : ''}.`
+    });
+    addToast(
+      'Refund Processed',
+      `₹${clampedAmount.toLocaleString('en-IN')} refunded via ${refund.refundMode}${settleRemainingDue ? ' (Account closed as Refunded)' : ''}.`,
+      'info'
+    );
   };
 
   // Admin & Staff Auth Actions
@@ -1354,10 +1982,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addToast('Account Inactive', 'This administrator account has been deactivated.', 'error');
         return false;
       }
+      isAdminLoggedInRef.current = true;
       setIsAdminLoggedIn(true);
       const updatedUser = { ...matchedAdmin, lastLogin: new Date().toISOString() };
+      currentAdminUserRef.current = updatedUser;
       setCurrentAdminUser(updatedUser);
       setAdminUsers((prev) => prev.map((u) => (u.id === matchedAdmin.id ? updatedUser : u)));
+      recordActivity({
+        action: 'Signed In to Console',
+        category: 'AUTH',
+        targetType: 'Session',
+        targetId: updatedUser.id,
+        details: `${updatedUser.fullName} (${updatedUser.role.replace('_', ' ')}) signed in.`,
+        actorOverride: updatedUser
+      });
       addToast('Welcome Back', `Logged in as ${matchedAdmin.fullName} (${matchedAdmin.role.replace('_', ' ')}).`, 'success');
       return true;
     }
@@ -1372,6 +2010,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     if (matchedStaff) {
+      isAdminLoggedInRef.current = true;
       setIsAdminLoggedIn(true);
       const isFinance = matchedStaff.loginRole === 'FINANCE' || trimmedEmail.includes('finance');
       const staffUser: AdminUser = {
@@ -1382,10 +2021,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: 'ACTIVE',
         phone: matchedStaff.phone,
         designation: matchedStaff.designation || (isFinance ? 'Patient Billing & Finance Officer' : 'Staff Coordinator'),
+        avatarUrl: matchedStaff.avatarUrl,
         lastLogin: new Date().toISOString(),
         createdAt: matchedStaff.createdAt
       };
+      currentAdminUserRef.current = staffUser;
       setCurrentAdminUser(staffUser);
+      recordActivity({
+        action: 'Signed In to Console',
+        category: 'AUTH',
+        targetType: 'Session',
+        targetId: staffUser.id,
+        details: `${staffUser.fullName} (${isFinance ? 'Finance Staff' : 'Clinical Staff'}) signed in.`,
+        actorOverride: staffUser
+      });
       addToast(
         isFinance ? 'Finance Access Granted' : 'Staff Access Granted',
         isFinance
@@ -1402,12 +2051,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         trimmedEmail === 'coordinator@nursecare.org') &&
       pass === 'admin123'
     ) {
+      isAdminLoggedInRef.current = true;
       setIsAdminLoggedIn(true);
       const fallbackUser =
         trimmedEmail === 'coordinator@nursecare.org'
           ? adminUsers[1] || INITIAL_ADMIN_USERS[1]
           : adminUsers[0] || INITIAL_ADMIN_USERS[0];
+      currentAdminUserRef.current = fallbackUser;
       setCurrentAdminUser(fallbackUser);
+      recordActivity({
+        action: 'Signed In to Console',
+        category: 'AUTH',
+        targetType: 'Session',
+        targetId: fallbackUser.id,
+        details: `${fallbackUser.fullName} (${fallbackUser.role.replace('_', ' ')}) signed in.`,
+        actorOverride: fallbackUser
+      });
       addToast('Welcome Administrator', `Logged into Nurse Care Admin Panel as ${fallbackUser.fullName}.`, 'success');
       return true;
     }
@@ -1417,6 +2076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       trimmedEmail === 'finance@nursecare.org' &&
       (pass === 'finance123' || pass === 'admin123')
     ) {
+      isAdminLoggedInRef.current = true;
       setIsAdminLoggedIn(true);
       const financeUser: AdminUser = {
         id: 'stf-finance-demo',
@@ -1429,7 +2089,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastLogin: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
+      currentAdminUserRef.current = financeUser;
       setCurrentAdminUser(financeUser);
+      recordActivity({
+        action: 'Signed In to Console',
+        category: 'AUTH',
+        targetType: 'Session',
+        targetId: financeUser.id,
+        details: `${financeUser.fullName} (Finance Staff) signed in.`,
+        actorOverride: financeUser
+      });
       addToast('Finance Access Granted', 'Logged in as Amit Saxena (Finance Desk: Finances & Patient Billing Only).', 'success');
       return true;
     }
@@ -1440,6 +2109,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       (pass === 'staff123' || pass === 'admin123')
     ) {
       const demoStaff = staffRecords.find((s) => s.canLogin && s.loginRole !== 'FINANCE') || staffRecords[0];
+      isAdminLoggedInRef.current = true;
       setIsAdminLoggedIn(true);
       const staffUser: AdminUser = {
         id: demoStaff?.id || 'stf-demo',
@@ -1452,7 +2122,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastLogin: new Date().toISOString(),
         createdAt: new Date().toISOString()
       };
+      currentAdminUserRef.current = staffUser;
       setCurrentAdminUser(staffUser);
+      recordActivity({
+        action: 'Signed In to Console',
+        category: 'AUTH',
+        targetType: 'Session',
+        targetId: staffUser.id,
+        details: `${staffUser.fullName} (Clinical Staff) signed in.`,
+        actorOverride: staffUser
+      });
       addToast('Staff Access Granted', `Logged in as ${staffUser.fullName} (Staff: Enquiries & Nurses Management).`, 'success');
       return true;
     }
@@ -1462,6 +2141,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminLogout = () => {
+    const departingUser = currentAdminUserRef.current;
+    if (departingUser) {
+      recordActivity({
+        action: 'Signed Out of Console',
+        category: 'AUTH',
+        targetType: 'Session',
+        targetId: departingUser.id,
+        details: `${departingUser.fullName} (${departingUser.role.replace('_', ' ')}) signed out.`,
+        actorOverride: departingUser
+      });
+    }
+    isAdminLoggedInRef.current = false;
+    currentAdminUserRef.current = null;
     setIsAdminLoggedIn(false);
     setCurrentAdminUser(null);
     addToast('Signed Out', 'You have been logged out of the admin console.', 'info');
@@ -1541,6 +2233,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         processRefund,
         contactMessages,
         addContactMessage,
+        updateContactMessage,
+        deleteContactMessage,
+        activityLogs,
         toasts,
         addToast,
         removeToast

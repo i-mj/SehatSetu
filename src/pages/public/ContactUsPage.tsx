@@ -106,8 +106,8 @@ export const ContactUsPage: React.FC = () => {
       />
 
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/30 to-white pt-16 pb-12 border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
+      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/30 to-white pt-7 pb-6 border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7 text-center max-w-3xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold mb-4">
             <Headphones className="w-3.5 h-3.5 text-[#0f8672]" />
             <span>Care Coordination Helpline</span>
@@ -122,9 +122,9 @@ export const ContactUsPage: React.FC = () => {
       </section>
 
       {/* Contact Cards Grid */}
-      <section className="py-12 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      <section className="py-6 sm:py-7 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Phone */}
             <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs hover:border-teal-200 transition-colors flex flex-col justify-between">
               <div>
@@ -233,7 +233,7 @@ export const ContactUsPage: React.FC = () => {
           {/* ========================================================= */}
           {/* INTERACTIVE CONTACT US FORM SECTION */}
           {/* ========================================================= */}
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-10 shadow-xs mb-12">
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-xs mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* Left Column: Form Intro & Highlights */}
               <div className="lg:col-span-5 space-y-4">
@@ -279,9 +279,9 @@ export const ContactUsPage: React.FC = () => {
               </div>
 
               {/* Right Column: Contact Form */}
-              <div className="lg:col-span-7 bg-slate-50/70 border border-slate-200/80 rounded-2xl p-6 sm:p-8">
+              <div className="lg:col-span-7 bg-slate-50/70 border border-slate-200/80 rounded-2xl p-6 sm:p-7">
                 {isSubmitted ? (
-                  <div className="text-center py-8 space-y-4 animate-in fade-in duration-200">
+                  <div className="text-center py-7 space-y-4 animate-in fade-in duration-200">
                     <div className="w-14 h-14 rounded-full bg-[#0f8672] text-white flex items-center justify-center mx-auto shadow-sm">
                       <CheckCircle2 className="w-8 h-8" />
                     </div>
@@ -408,7 +408,7 @@ export const ContactUsPage: React.FC = () => {
           </div>
 
           {/* Quick Care Request Action Banner */}
-          <div className="bg-gradient-to-r from-[#0f8672] to-[#0e6b5c] rounded-2xl p-8 sm:p-10 text-white shadow-lg">
+          <div className="bg-gradient-to-r from-[#0f8672] to-[#0e6b5c] rounded-2xl p-6 sm:p-7 text-white shadow-lg">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-8 space-y-3">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 text-xs font-semibold">

@@ -173,13 +173,13 @@ export const NurseOnboardingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 py-16">
+    <div className="min-h-screen bg-slate-50/50 py-7">
       <PageSeo
         title="Clinical Nurse Credentialing Portal"
         description="Confidential intake portal for qualified nursing professionals applying to the Nurse Care roster."
       />
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-7">
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-100 text-[#0e6b5c] text-xs font-semibold mb-3">
@@ -195,7 +195,7 @@ export const NurseOnboardingPage: React.FC = () => {
         </div>
 
         {isSuccess ? (
-          <div className="bg-white border border-teal-200 rounded-2xl p-8 sm:p-12 text-center space-y-5 shadow-sm">
+          <div className="bg-white border border-teal-200 rounded-2xl p-6 sm:p-7 text-center space-y-5 shadow-sm">
             <div className="w-16 h-16 rounded-full bg-[#0f8672] text-white flex items-center justify-center mx-auto shadow-md">
               <CheckCircle2 className="w-9 h-9" />
             </div>
@@ -221,7 +221,7 @@ export const NurseOnboardingPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-10 shadow-sm">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-sm">
             <div className="flex items-center gap-2.5 pb-5 border-b border-slate-100 mb-6">
               <UserPlus className="w-5 h-5 text-[#0f8672]" />
               <h2 className="text-base font-bold text-slate-900">

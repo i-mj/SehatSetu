@@ -187,11 +187,11 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+      <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
+        {/* Fixed Modal Header */}
+        <div className="flex items-center justify-between px-6 sm:px-7 py-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
               <FileSpreadsheet className="w-6 h-6" />
             </div>
             <div>
@@ -204,12 +204,15 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        <div className="flex-1 overflow-y-auto px-6 sm:px-7 py-5 space-y-6">
 
         {/* Auth State Card */}
         {!googleUser ? (
@@ -395,6 +398,7 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

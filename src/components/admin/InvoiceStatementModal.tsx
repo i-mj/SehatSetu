@@ -546,9 +546,9 @@ export const InvoiceStatementModal: React.FC<InvoiceStatementModalProps> = ({
         </div>
 
         {/* Printable Invoice Document Body (Screen View) */}
-        <div className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1 text-slate-700 text-xs bg-slate-50/50" ref={printAreaRef}>
+        <div className="p-6 sm:p-7 overflow-y-auto space-y-6 flex-1 text-slate-700 text-xs bg-slate-50/50" ref={printAreaRef}>
           {/* Invoice Paper Canvas */}
-          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-sm space-y-6">
             {/* Header / Brand */}
             <div className="flex flex-wrap items-start justify-between gap-4 pb-6 border-b-2 border-[#0f8672]">
               <div>

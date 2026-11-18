@@ -3,9 +3,15 @@
  * Provides realistic initial records for enquiries, nurses, reviews, and services.
  */
 
-import { AdminUser, Enquiry, Nurse, Review, ServiceItem, ServiceLocation, SiteSettings, StaffRecord, CareBilling, Document } from '../types';
+import { AdminUser, ContactMessage, Enquiry, Nurse, Review, ServiceItem, ServiceLocation, SiteSettings, StaffRecord, CareBilling, Document, ActivityLogEntry } from '../types';
 
 export const SAMPLE_DOC_PRESCRIPTION = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="750" viewBox="0 0 600 750"><rect width="100%" height="100%" fill="%23ffffff"/><rect x="20" y="20" width="560" height="710" fill="none" stroke="%230f8672" stroke-width="2"/><text x="40" y="70" font-family="Arial" font-size="22" font-weight="bold" fill="%230f8672">MAX SUPER SPECIALITY HOSPITAL</text><text x="40" y="95" font-family="Arial" font-size="12" fill="%23666666">Department of Orthopaedics &amp; Post-Surgical Rehabilitation</text><line x1="40" y1="110" x2="560" y2="110" stroke="%23cccccc" stroke-width="1"/><text x="40" y="140" font-family="Arial" font-size="14" font-weight="bold" fill="%23333333">Patient Name: Eleanor Vance (79 Y / F)</text><text x="40" y="165" font-family="Arial" font-size="13" fill="%23555555">Diagnosis: Post-Operative Total Knee Arthroplasty (TKA)</text><text x="40" y="190" font-family="Arial" font-size="13" fill="%23555555">Date of Discharge: October 12, 2026</text><line x1="40" y1="210" x2="560" y2="210" stroke="%230f8672" stroke-width="1.5"/><text x="40" y="245" font-family="Arial" font-size="16" font-weight="bold" fill="%230f8672">Rx - Home Nursing &amp; Clinical Orders:</text><text x="40" y="280" font-family="Arial" font-size="13" fill="%23333333">1. Sterile Surgical Wound Dressing every 48 hours with Betadine &amp; Opsite</text><text x="40" y="310" font-family="Arial" font-size="13" fill="%23333333">2. Vital signs charting: BP, Pulse, SpO2 twice daily</text><text x="40" y="340" font-family="Arial" font-size="13" fill="%23333333">3. Tab. Cefuroxime 500mg BD after food x 5 days</text><text x="40" y="370" font-family="Arial" font-size="13" fill="%23333333">4. Daily passive quadriceps exercises and assisted walker ambulation</text><text x="40" y="400" font-family="Arial" font-size="13" fill="%23333333">5. Strict barrier asepsis and fall prevention protocol</text><rect x="40" y="610" width="220" height="65" fill="%23f8fafc" stroke="%23cbd5e1"/><text x="50" y="635" font-family="Arial" font-size="12" font-weight="bold" fill="%23334155">Dr. K. N. Singhal, MS (Ortho)</text><text x="50" y="655" font-family="Arial" font-size="10" fill="%2364748b">Reg No: DNC/MCI/44120</text></svg>`;
+
+export const SAMPLE_DOC_CARE_PLAN_PDF = "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgL0YyIDYgMCBSID4+ID4+ID4+CmVuZG9iago0IDAgb2JqCjw8IC9MZW5ndGggMTQ5NyA+PgpzdHJlYW0KQlQKL0YxIDE4IFRmCjUwIDc0MCBUZAooTUFYIFNVUEVSIFNQRUNJQUxJVFkgSE9TUElUQUwpIFRqCi9GMiAxMCBUZgowIC0xOCBUZAooTWF4IEhlYWx0aGNhcmUgU2VydmljZXMgLSBEZXBhcnRtZW50IG9mIE9ydGhvcGFlZGljcykgVGoKL0YyIDkgVGYKMCAtMTQgVGQKKE5BQkggUXVhbGl0eSBDZXJ0aWZpZWQgfCAyNHg3IEVtZXJnZW5jeSBDbGluaWNhbCBIb3RsaW5lOiArOTEgMTEgNDA1MCAzMDMwKSBUagovRjEgMTMgVGYKMCAtMjggVGQKKENMSU5JQ0FMIEFETUlTU0lPTiAmIFBSRVNDUklCRUQgSE9NRSBSRUhBQklMSVRBVElPTiBSRUNPUkQpIFRqCi9GMiAxMCBUZgowIC0yMCBUZAooUGF0aWVudDogQmVhdHJpY2UgVGF5bG9yIHwgQWdlOiA3OSB8IEdlbmRlcjogRmVtYWxlKSBUagowIC0xNiBUZAooQ2xpbmljYWwgRGlhZ25vc2lzOiBQb3N0LU9wZXJhdGl2ZSBUb3RhbCBLbmVlIEFydGhyb3BsYXN0eSAoVEtBKSkgVGoKMCAtMTYgVGQKKEF0dGVuZGluZyBDb25zdWx0YW50OiBEci4gSy4gTi4gU2luZ2hhbCwgTVMgKE9ydGhvKSkgVGoKMCAtMTYgVGQKKERpc2NoYXJnZSBEYXRlOiBPY3RvYmVyIDEyLCAyMDI2IHwgSW5wYXRpZW50IFdhcmQ6IE9ydGhvLTMwNCkgVGoKMCAtMTYgVGQKKC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tKSBUagowIC0yMCBUZAovRjEgMTEgVGYKKFBSRVNDUklCRUQgSE9NRSBDTElOSUNBTCAmIE5VUlNJTkcgT1JERVJTOikgVGoKL0YyIDEwIFRmCjAgLTE4IFRkCigxLiBTdGVyaWxlIFN1cmdpY2FsIFdvdW5kIERyZXNzaW5nIGV2ZXJ5IDQ4IGhvdXJzIHdpdGggT3BzaXRlICYgQmV0YWRpbmUuKSBUagowIC0xNiBUZAooMi4gU3RyaWN0IGFzZXB0aWMgdGVjaG5pcXVlOyBjaGVjayBzdXR1cmUgbGluZSBmb3IgZXJ5dGhlbWEgb3IgZGlzY2hhcmdlLikgVGoKMCAtMTYgVGQKKDMuIFZpdGFsIFNpZ25zIE1vbml0b3Jpbmc6IEJQLCBQdWxzZSwgU3BPMiwgYW5kIFRlbXAgdHdpY2UgZGFpbHkuKSBUagowIC0xNiBUZAooNC4gTWVkaWNhdGlvbjogVGFiIENlZnVyb3hpbWUgNTAwbWcgQkQgeCA1IGRheXM7IFRhYiBQYXJhY2V0YW1vbCBTT1MuKSBUagowIC0xNiBUZAooNS4gQXNzaXN0ZWQgd2Fsa2VyIGFtYnVsYXRpb24gYW5kIHN1cGVydmlzZWQgaXNvbWV0cmljIHF1YWQgc2V0cyBkYWlseS4pIFRqCjAgLTE2IFRkCig2LiBBc3NpZ25lZCBQcmltYXJ5IENhcmVnaXZlcjogU2lzdGVyIFN1bml0YSBSb3ksIFJOIChETkMgUmVnICM0ODkyMSkuKSBUagowIC0xNiBUZAovRjEgMTAgVGYKMCAtMjggVGQKKERyLiBLLiBOLiBTaW5naGFsLCBNUyAoT3J0aG8pIC0gU2VuaW9yIENvbnN1bHRhbnQpIFRqCjAgLTE0IFRkCi9GMiA5IFRmCihSZWdpc3RyYXRpb246IE1DSS1ETUMtODQ5MjAgfCBEaWdpdGFsbHkgVmVyaWZpZWQgdmlhIE51cnNlIENhcmUgRUhSIEdhdGV3YXkpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EtQm9sZCA+PgplbmRvYmoKNiAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EgPj4KZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI1MSAwMDAwMCBuIAowMDAwMDAxODAwIDAwMDAwIG4gCjAwMDAwMDE4NzUgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA3IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgoxOTQ1CiUlRU9GCg==";
+
+export const SAMPLE_DOC_DISCHARGE_PDF = "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgL0YyIDYgMCBSID4+ID4+ID4+CmVuZG9iago0IDAgb2JqCjw8IC9MZW5ndGggMTQzMSA+PgpzdHJlYW0KQlQKL0YxIDE4IFRmCjUwIDc0MCBUZAooRk9SVElTIE1FTU9SSUFMIFJFU0VBUkNIIElOU1RJVFVURSkgVGoKL0YyIDEwIFRmCjAgLTE4IFRkCihEZXBhcnRtZW50IG9mIFN1cmdpY2FsIEdhc3Ryb2VudGVyb2xvZ3kgJiBNaW5pbWFsIEFjY2VzcyBTdXJnZXJ5KSBUagovRjIgOSBUZgowIC0xNCBUZAooTkFCSCBRdWFsaXR5IENlcnRpZmllZCB8IDI0eDcgRW1lcmdlbmN5IENsaW5pY2FsIEhvdGxpbmU6ICs5MSAxMSA0MDUwIDMwMzApIFRqCi9GMSAxMyBUZgowIC0yOCBUZAooQ0xJTklDQUwgQURNSVNTSU9OICYgUFJFU0NSSUJFRCBIT01FIFJFSEFCSUxJVEFUSU9OIFJFQ09SRCkgVGoKL0YyIDEwIFRmCjAgLTIwIFRkCihQYXRpZW50OiBBbWl0IFBhdGVsIHwgQWdlOiA0NiB8IEdlbmRlcjogTWFsZSkgVGoKMCAtMTYgVGQKKENsaW5pY2FsIERpYWdub3NpczogUG9zdC1PcCBMYXBhcm9zY29waWMgQ2hvbGVjeXN0ZWN0b215ICYgRHJhaW4gU2l0ZSkgVGoKMCAtMTYgVGQKKEF0dGVuZGluZyBDb25zdWx0YW50OiBEci4gUmFqZXNoIEd1cHRhLCBNUywgRE5CIChTdXJnIEdhc3RybykpIFRqCjAgLTE2IFRkCihEaXNjaGFyZ2UgRGF0ZTogT2N0b2JlciAwOCwgMjAyNiB8IERheUNhcmUgVW5pdC0xMikgVGoKMCAtMTYgVGQKKC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tKSBUagowIC0yMCBUZAovRjEgMTEgVGYKKFBSRVNDUklCRUQgSE9NRSBDTElOSUNBTCAmIE5VUlNJTkcgT1JERVJTOikgVGoKL0YyIDEwIFRmCjAgLTE4IFRkCigxLiBBYmRvbWluYWwgcHVuY3R1cmUgZHJlc3NpbmcgJiBkcmFpbiB0dWJlIHN1cnZlaWxsYW5jZSBhbHRlcm5hdGUgZGF5cy4pIFRqCjAgLTE2IFRkCigyLiBSZWNvcmQgZGFpbHkgZHJhaW4gb3V0cHV0IHZvbHVtZSwgY29sb3IsIGFuZCBjb25zaXN0ZW5jeSBpbiBiZWRzaWRlIGxvZy4pIFRqCjAgLTE2IFRkCigzLiBBbmFsZ2VzaWE6IFRhYiBUcmFtYWRvbCArIFBhcmFjZXRhbW9sIEJEIGZvciAzIGRheXMgYXMgYWR2aXNlZC4pIFRqCjAgLTE2IFRkCig0LiBTdXR1cmUgcmVtb3ZhbCBzY2hlZHVsZWQgZm9yIFBvc3QtT3AgRGF5IDEwIGF0IG91dHBhdGllbnQgY2xpbmljLikgVGoKMCAtMTYgVGQKKDUuIEFzc2lnbmVkIFZpc2l0aW5nIE51cnNlOiBOdXJzZSBSYWplc2ggS3VtYXIsIEdOTSAoV291bmQgQ2VydGlmaWVkKS4pIFRqCjAgLTE2IFRkCi9GMSAxMCBUZgowIC0yOCBUZAooRHIuIFJhamVzaCBHdXB0YSwgTVMsIEROQiAtIFNlbmlvciBDb25zdWx0YW50IFN1cmdlb24pIFRqCjAgLTE0IFRkCi9GMiA5IFRmCihSZWdpc3RyYXRpb246IEROQy1NQ0ktNjIxMTggfCBEaWdpdGFsbHkgVmVyaWZpZWQgdmlhIE51cnNlIENhcmUgRUhSIEdhdGV3YXkpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EtQm9sZCA+PgplbmRvYmoKNiAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EgPj4KZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI1MSAwMDAwMCBuIAowMDAwMDAxNzM0IDAwMDAwIG4gCjAwMDAwMDE4MDkgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA3IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgoxODc5CiUlRU9GCg==";
+
+export const SAMPLE_DOC_RX_IMAGE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800"><rect width="100%" height="100%" fill="%23ffffff"/><rect x="20" y="20" width="560" height="760" fill="none" stroke="%230f8672" stroke-width="2"/><text x="40" y="65" font-family="Arial" font-size="20" font-weight="bold" fill="%230f8672">MEDANTA THE MEDICITY</text><text x="40" y="88" font-family="Arial" font-size="12" fill="%23666666">Institute of Chest Medicine &amp; Pulmonology</text><line x1="40" y1="105" x2="560" y2="105" stroke="%23cccccc" stroke-width="1"/><text x="40" y="135" font-family="Arial" font-size="13" font-weight="bold" fill="%23333333">Patient: Robert Wilson (Age: 62 / M)</text><text x="40" y="158" font-family="Arial" font-size="12" fill="%23555555">Diagnosis: Acute Viral Bronchitis with Reactive Airway</text><line x1="40" y1="180" x2="560" y2="180" stroke="%230f8672" stroke-width="1"/><text x="40" y="215" font-family="Arial" font-size="15" font-weight="bold" fill="%230f8672">Rx - Home Nebulization &amp; Monitoring:</text><text x="40" y="245" font-family="Arial" font-size="12" fill="%23333333">1. Nebulization with Levolin 0.63mg + Budecort 0.5mg twice daily x 7 days</text><text x="40" y="275" font-family="Arial" font-size="12" fill="%23333333">2. Check SpO2 prior to and 15 mins following each nebulizer cycle</text><text x="40" y="305" font-family="Arial" font-size="12" fill="%23333333">3. Fasting blood sugar &amp; Post-prandial glucose tracking every 48 hours</text><text x="40" y="335" font-family="Arial" font-size="12" fill="%23333333">4. Steam inhalation and incentive spirometry (10 breaths/hour while awake)</text><rect x="40" y="650" width="240" height="60" fill="%23f8fafc" stroke="%23cbd5e1"/><text x="50" y="675" font-family="Arial" font-size="11" font-weight="bold" fill="%23334155">Dr. Vikramjit Singh, MD (Pulm)</text><text x="50" y="695" font-family="Arial" font-size="9" fill="%2364748b">Medanta Pulmonology Desk | DMC 55192</text></svg>`;
 
 export const SAMPLE_DOC_COUNCIL_CERT = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="700" height="500" viewBox="0 0 700 500"><rect width="100%" height="100%" fill="%23fffdf7"/><rect x="25" y="25" width="650" height="450" fill="none" stroke="%23b45309" stroke-width="3"/><rect x="35" y="35" width="630" height="430" fill="none" stroke="%23d97706" stroke-width="1"/><text x="350" y="90" text-anchor="middle" font-family="Georgia" font-size="24" font-weight="bold" fill="%2378350f">DELHI NURSING COUNCIL</text><text x="350" y="115" text-anchor="middle" font-family="Arial" font-size="12" fill="%2392400e">Statutory Body Under Government of NCT of Delhi</text><line x1="150" y1="130" x2="550" y2="130" stroke="%23b45309" stroke-width="1"/><text x="350" y="180" text-anchor="middle" font-family="Georgia" font-size="20" font-style="italic" fill="%231e293b">Certificate of Registration</text><text x="350" y="220" text-anchor="middle" font-family="Arial" font-size="13" fill="%23475569">This is to certify that the undermentioned candidate is duly registered as a</text><text x="350" y="255" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="%230f8672">REGISTERED NURSE &amp; REGISTERED MIDWIFE (RN / RM)</text><text x="350" y="295" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="%230f172a">Registration No: DNC-RN-48921 / 2018</text><text x="350" y="330" text-anchor="middle" font-family="Arial" font-size="13" fill="%23475569">Having completed B.Sc (Hons) Nursing from accredited nursing council</text><text x="100" y="420" font-family="Arial" font-size="11" fill="%2364748b">Date of Issue: 18-07-2018</text><text x="500" y="420" font-family="Arial" font-size="11" font-weight="bold" fill="%230f172a">Registrar, Delhi Nursing Council</text></svg>`;
 
@@ -541,7 +547,7 @@ export const INITIAL_ENQUIRIES: Enquiry[] = [
         name: 'Physician_Care_Plan_Taylor.pdf',
         fileType: 'pdf',
         fileSize: 1245000,
-        fileUrl: '#mock-pdf-taylor',
+        fileUrl: SAMPLE_DOC_CARE_PLAN_PDF,
         uploadedAt: '2026-10-03T14:15:00Z',
         uploadedBy: 'Admin'
       }
@@ -582,7 +588,7 @@ export const INITIAL_ENQUIRIES: Enquiry[] = [
         name: 'Discharge_Summary_Patel.pdf',
         fileType: 'pdf',
         fileSize: 840000,
-        fileUrl: '#mock-pdf-patel',
+        fileUrl: SAMPLE_DOC_DISCHARGE_PDF,
         uploadedAt: '2026-10-02T09:10:00Z',
         uploadedBy: 'Admin'
       }
@@ -628,7 +634,7 @@ export const INITIAL_ENQUIRIES: Enquiry[] = [
         name: 'Pulmonologist_Rx_Wilson.jpg',
         fileType: 'jpg',
         fileSize: 520000,
-        fileUrl: '#mock-jpg-rx',
+        fileUrl: SAMPLE_DOC_RX_IMAGE,
         uploadedAt: '2026-09-25T15:45:00Z',
         uploadedBy: 'Admin'
       }
@@ -921,6 +927,176 @@ export const INITIAL_BILLINGS: CareBilling[] = [
     updatedAt: '2026-10-12T11:00:00Z'
   }
 ];
+
+export const INITIAL_CONTACT_MESSAGES: ContactMessage[] = [
+  {
+    id: 'msg-101',
+    fullName: 'Meenakshi Kapoor',
+    email: 'meenakshi.kapoor@example.com',
+    phone: '+91 98104 77231',
+    subject: 'General Clinical Query',
+    message: 'Looking for information on whether your post-operative nurses assist with ortho drain removal and home physiotherapy coordination in Vasant Kunj.',
+    status: 'NEW',
+    createdAt: '2026-10-15T11:20:00Z'
+  },
+  {
+    id: 'msg-102',
+    fullName: 'Dr. Arvind Subramanian',
+    email: 'arvind.subramanian@example.com',
+    phone: '+91 98711 44019',
+    subject: 'Corporate / Hospital Tie-up',
+    message: 'We run an orthopaedic rehabilitation clinic in Greater Kailash and would like to coordinate discharged patients requiring 12-hour nursing supervision.',
+    status: 'IN_PROGRESS',
+    adminNotes: 'Spoken with Dr. Subramanian; scheduling partnership call for Friday afternoon.',
+    updatedAt: '2026-10-14T16:45:00Z',
+    createdAt: '2026-10-14T09:10:00Z'
+  },
+  {
+    id: 'msg-103',
+    fullName: 'Harpreet Singh Gill',
+    email: 'harpreet.gill@example.com',
+    phone: '+91 99100 33120',
+    subject: 'Billing & Payment Support',
+    message: 'Need consolidated GST invoice copy for September shift billing under Eleanor Vance care plan for insurance reimbursement.',
+    status: 'RESOLVED',
+    adminNotes: 'Consolidated statement PDF emailed to family.',
+    updatedAt: '2026-10-12T14:30:00Z',
+    createdAt: '2026-10-12T10:05:00Z'
+  },
+  {
+    id: 'msg-104',
+    fullName: 'Kavita Deshmukh',
+    email: 'kavita.deshmukh@example.com',
+    phone: '+91 98201 55410',
+    subject: 'Elderly Companionship Guidance',
+    message: 'Requesting call back regarding daytime attendant availability for my mother in Saket starting next month.',
+    status: 'PENDING',
+    adminNotes: 'Left voicemail; awaiting family callback after 5 PM.',
+    updatedAt: '2026-10-13T11:15:00Z',
+    createdAt: '2026-10-13T09:40:00Z'
+  },
+  {
+    id: 'msg-105',
+    fullName: 'Rohan Malhotra',
+    email: 'rohan.m@example.com',
+    phone: '+91 98180 22319',
+    subject: 'Nurse Career Inquiries',
+    message: 'Enquiring on behalf of my sister who has completed B.Sc Nursing and holds a Delhi Nursing Council license.',
+    status: 'ARCHIVED',
+    adminNotes: 'Shared private nurse onboarding link and archived query.',
+    updatedAt: '2026-10-08T17:20:00Z',
+    createdAt: '2026-10-08T10:15:00Z'
+  }
+];
+
+export const INITIAL_ACTIVITY_LOGS: ActivityLogEntry[] = [
+  {
+    id: 'log-101',
+    actorId: 'admin-2',
+    actorName: 'Rajesh Malhotra',
+    actorEmail: 'coordinator@nursecare.org',
+    actorRole: 'CLINICAL_ADMIN',
+    action: 'Assigned Nurse to Enquiry',
+    category: 'ENQUIRY',
+    targetType: 'Enquiry',
+    targetId: 'enq-102',
+    details: 'Assigned Nurse Anjali Verma to Rahul Sharma (Post-Surgical Care & Dressing) and moved stage to CONFIRMED.',
+    timestamp: '2026-11-17T09:45:00Z'
+  },
+  {
+    id: 'log-102',
+    actorId: 'stf-6',
+    actorName: 'Amit Saxena',
+    actorEmail: 'finance@nursecare.org',
+    actorRole: 'FINANCE',
+    action: 'Recorded Patient Payment',
+    category: 'FINANCE',
+    targetType: 'CareBilling',
+    targetId: 'bill-101',
+    details: 'Logged ₹20,000 UPI payment (Ref: UPI-7819230182) for Eleanor Vance (#bill-101).',
+    timestamp: '2026-11-17T08:30:00Z'
+  },
+  {
+    id: 'log-103',
+    actorId: 'stf-5',
+    actorName: 'Pooja Nair',
+    actorEmail: 'pooja.nair@nursecare.org',
+    actorRole: 'STAFF',
+    action: 'Verified Nurse Credentials',
+    category: 'NURSE',
+    targetType: 'Nurse',
+    targetId: 'nurse-1',
+    details: 'Uploaded State Nursing Council certificate and confirmed ACTIVE roster status for Sister Sunita Roy.',
+    timestamp: '2026-11-16T16:20:00Z'
+  },
+  {
+    id: 'log-104',
+    actorId: 'admin-2',
+    actorName: 'Rajesh Malhotra',
+    actorEmail: 'coordinator@nursecare.org',
+    actorRole: 'CLINICAL_ADMIN',
+    action: 'Updated Contact Enquiry',
+    category: 'CONTACT',
+    targetType: 'ContactMessage',
+    targetId: 'msg-102',
+    details: 'Marked query from Dr. Arvind Subramanian as In Progress and recorded follow-up call notes.',
+    timestamp: '2026-11-16T14:10:00Z'
+  },
+  {
+    id: 'log-105',
+    actorId: 'stf-6',
+    actorName: 'Amit Saxena',
+    actorEmail: 'finance@nursecare.org',
+    actorRole: 'FINANCE',
+    action: 'Signed In to Console',
+    category: 'AUTH',
+    targetType: 'Session',
+    targetId: 'stf-6',
+    details: 'Amit Saxena (Finance Staff) authenticated into Finances & Billing Desk.',
+    timestamp: '2026-11-16T09:05:00Z'
+  },
+  {
+    id: 'log-106',
+    actorId: 'stf-2',
+    actorName: 'Vikram Joshi',
+    actorEmail: 'vikram.joshi@nursecare.org',
+    actorRole: 'STAFF',
+    action: 'Updated Enquiry Notes',
+    category: 'ENQUIRY',
+    targetType: 'Enquiry',
+    targetId: 'enq-101',
+    details: 'Added shift briefing and South Delhi travel route coordinates for Eleanor Vance.',
+    timestamp: '2026-11-15T17:50:00Z'
+  },
+  {
+    id: 'log-107',
+    actorId: 'admin-2',
+    actorName: 'Rajesh Malhotra',
+    actorEmail: 'coordinator@nursecare.org',
+    actorRole: 'CLINICAL_ADMIN',
+    action: 'Approved Patient Review',
+    category: 'REVIEW',
+    targetType: 'Review',
+    targetId: 'rev-1',
+    details: 'Published verified 5-star family testimonial for Elderly Care at Home.',
+    timestamp: '2026-11-15T11:30:00Z'
+  },
+  {
+    id: 'log-108',
+    actorId: 'admin-1',
+    actorName: 'Dr. Priya Sharma',
+    actorEmail: 'admin@nursecare.org',
+    actorRole: 'SUPER_ADMIN',
+    action: 'Updated Coverage Zones',
+    category: 'SERVICE',
+    targetType: 'ServiceLocation',
+    targetId: 'loc-1',
+    details: 'Confirmed 2-3 hour dispatch SLA across South Delhi residential sectors.',
+    timestamp: '2026-11-14T15:15:00Z'
+  }
+];
+
+
 
 
 

@@ -198,7 +198,7 @@ export const AdminReviews: React.FC = () => {
       {/* Reviews Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredReviews.length === 0 ? (
-          <div className="col-span-2 py-16 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">
+          <div className="col-span-2 py-7 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">
             No reviews found matching status "{statusFilter}".
           </div>
         ) : (
@@ -331,27 +331,28 @@ export const AdminReviews: React.FC = () => {
       {/* ADD / EDIT REVIEW MODAL */}
       {(isAddModalOpen || editingReview) && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
               <h3 className="text-sm font-bold text-slate-900">
                 {editingReview ? 'Edit Review Record' : 'Add Manual Review'}
               </h3>
               <button
+                type="button"
                 onClick={() => {
                   setIsAddModalOpen(false);
                   setEditingReview(null);
                 }}
-                className="text-slate-400 hover:text-slate-700"
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveReview} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveReview} className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Reviewer Name *</label>
                 <input

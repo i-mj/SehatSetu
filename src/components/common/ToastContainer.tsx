@@ -20,27 +20,27 @@ export const ToastContainer: React.FC = () => {
     >
       {toasts.map((toast) => {
         let Icon = Info;
-        let borderClass = 'border-blue-500 bg-white text-slate-900';
+        let borderClass = 'border-blue-200 bg-white text-slate-900';
         let iconClass = 'text-blue-500';
 
         if (toast.type === 'success') {
           Icon = CheckCircle2;
-          borderClass = 'border-teal-500 bg-white text-slate-900';
+          borderClass = 'border-teal-200 bg-white text-slate-900';
           iconClass = 'text-[#0f8672]';
         } else if (toast.type === 'warning') {
           Icon = AlertTriangle;
-          borderClass = 'border-amber-500 bg-white text-slate-900';
+          borderClass = 'border-amber-200 bg-white text-slate-900';
           iconClass = 'text-amber-500';
         } else if (toast.type === 'error') {
           Icon = XCircle;
-          borderClass = 'border-rose-500 bg-white text-slate-900';
+          borderClass = 'border-rose-200 bg-white text-slate-900';
           iconClass = 'text-rose-500';
         }
 
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-lg border-l-4 ${borderClass} transition-all duration-200 transform translate-y-0`}
+            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-lg border ${borderClass} transition-all duration-200 transform translate-y-0`}
             role="status"
           >
             <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${iconClass}`} />

@@ -150,8 +150,8 @@ export const AboutUsPage: React.FC = () => {
       />
 
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/30 to-white pt-16 pb-14 border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
+      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/30 to-white pt-7 pb-6 border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7 text-center max-w-3xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold mb-4">
             <HeartPulse className="w-3.5 h-3.5 text-[#0f8672]" />
             <span>Our Healthcare Philosophy</span>
@@ -166,8 +166,8 @@ export const AboutUsPage: React.FC = () => {
       </section>
 
       {/* Section 1: Who We Are */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-6 sm:py-7 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <span className="text-xs font-bold uppercase tracking-widest text-[#0f8672]">
@@ -196,7 +196,7 @@ export const AboutUsPage: React.FC = () => {
             </div>
 
             {/* Visual highlight box */}
-            <div className="bg-[#effaf8]/60 border border-teal-100 rounded-2xl p-8 space-y-6">
+            <div className="bg-[#effaf8]/60 border border-teal-100 rounded-2xl p-6 space-y-6">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Award className="w-5 h-5 text-[#0f8672]" />
                 <span>Our Core Operating Commitments</span>
@@ -227,9 +227,9 @@ export const AboutUsPage: React.FC = () => {
       </section>
 
       {/* Section 2: How Nurses Are Selected */}
-      <section className="py-20 bg-slate-50/70 border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+      <section className="py-6 sm:py-7 bg-slate-50/70 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
+          <div className="text-center max-w-2xl mx-auto mb-8">
             <span className="text-xs font-bold uppercase tracking-widest text-[#0f8672]">
               Rigorous Onboarding
             </span>
@@ -269,9 +269,9 @@ export const AboutUsPage: React.FC = () => {
       </section>
 
       {/* Section 3: Areas Covered */}
-      <section className="py-20 bg-white border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+      <section className="py-6 sm:py-7 bg-white border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
+          <div className="text-center max-w-2xl mx-auto mb-8">
             <span className="text-xs font-bold uppercase tracking-widest text-[#0f8672]">
               Regional Presence
             </span>
@@ -310,7 +310,7 @@ export const AboutUsPage: React.FC = () => {
             ))}
           </div>
 
-          <div className="mt-12 text-center text-xs text-slate-500">
+          <div className="mt-8 text-center text-xs text-slate-500">
             <p>
               Living outside our standard coverage sectors? Call our coordinator desk at <strong className="text-slate-700">+91 98765 43210</strong> to check customized dedicated nurse assignments.
             </p>
@@ -319,8 +319,8 @@ export const AboutUsPage: React.FC = () => {
       </section>
 
       {/* Bottom CTA */}
-      <section className="py-16 bg-[#effaf8]/50 border-t border-teal-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-5">
+      <section className="py-7 bg-[#effaf8]/50 border-t border-teal-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 text-center space-y-5">
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
             Need skilled nursing for a loved one today?
           </h2>

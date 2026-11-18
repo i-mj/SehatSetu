@@ -178,9 +178,9 @@ export const HomePage: React.FC = () => {
       />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-28 bg-gradient-to-b from-[#effaf8]/70 via-white to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+      <section className="relative overflow-hidden py-6 md:py-7 bg-gradient-to-b from-[#effaf8]/70 via-white to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center">
             {/* Left Col: Hero Proposition */}
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold tracking-wide">
@@ -237,7 +237,7 @@ export const HomePage: React.FC = () => {
                 {/* Decorative glow */}
                 <div className="absolute -inset-1.5 bg-gradient-to-tr from-teal-500/20 to-emerald-300/30 rounded-3xl blur-xl -z-10" />
 
-                <div className="bg-white rounded-2xl border border-teal-100 shadow-xl p-6 sm:p-8 space-y-6">
+                <div className="bg-white rounded-2xl border border-teal-100 shadow-xl p-5 sm:p-6 space-y-5">
                   <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl bg-[#effaf8] flex items-center justify-center text-[#0f8672]">
@@ -301,13 +301,13 @@ export const HomePage: React.FC = () => {
       {/* ========================================================= */}
       {/* HOMEPAGE DIRECT ENQUIRY FORM SECTION */}
       {/* ========================================================= */}
-      <section className="py-16 bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/30 to-white border-y border-teal-100/80">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-3xl border-2 border-teal-200/90 shadow-xl p-6 sm:p-10 relative overflow-hidden">
+      <section className="py-6 sm:py-7 bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/30 to-white border-y border-teal-100/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
+          <div className="bg-white rounded-3xl border border-teal-200 shadow-lg p-5 sm:p-6 lg:p-7 relative overflow-hidden">
             {/* Background decorative corner */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-teal-50 rounded-full blur-3xl -z-10 opacity-70 pointer-events-none" />
 
-            <div className="max-w-2xl mx-auto text-center mb-8 space-y-2">
+            <div className="max-w-3xl mx-auto text-center mb-5 space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold">
                 <Stethoscope className="w-3.5 h-3.5 text-[#0f8672]" />
                 <span>Fast Home Nursing Intake</span>
@@ -321,7 +321,7 @@ export const HomePage: React.FC = () => {
             </div>
 
             {enqSubmittedId ? (
-              <div className="p-8 bg-[#effaf8] border border-teal-200 rounded-2xl text-center space-y-4 max-w-lg mx-auto animate-in fade-in duration-200">
+              <div className="p-6 bg-[#effaf8] border border-teal-200 rounded-2xl text-center space-y-4 max-w-lg mx-auto animate-in fade-in duration-200">
                 <div className="w-14 h-14 rounded-full bg-[#0f8672] text-white flex items-center justify-center mx-auto shadow-sm">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
@@ -353,7 +353,7 @@ export const HomePage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleHomeEnquirySubmit} className="space-y-4 text-xs max-w-3xl mx-auto">
+              <form onSubmit={handleHomeEnquirySubmit} className="space-y-4 text-xs w-full">
                 {enqError && (
                   <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
                     <AlertOctagon className="w-4 h-4 shrink-0" />
@@ -459,7 +459,7 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 text-[11px] text-slate-500">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 sm:gap-4 text-[11px] text-slate-500">
                     <span className="flex items-center gap-1">
                       <ShieldCheck className="w-4 h-4 text-emerald-600" />
                       <span>Council Registered</span>
@@ -500,23 +500,23 @@ export const HomePage: React.FC = () => {
       <NursingServicesGrid showLocationStrip={true} />
 
       {/* "How it Works" in 3 Steps */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+      <section className="py-6 sm:py-7 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
+          <div className="text-center max-w-2xl mx-auto mb-6">
             <h2 className="text-xs font-bold uppercase tracking-widest text-[#0f8672] mb-2">
               Seamless Process
             </h2>
             <h3 className="text-3xl font-bold text-slate-900 tracking-tight">
               How Home Nursing Works in 3 Steps
             </h3>
-            <p className="text-slate-600 text-sm mt-3">
+            <p className="text-slate-600 text-sm mt-2">
               Simple, transparent booking designed to give your family comfort and reliability from day one.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
             {/* Step 1 */}
-            <div className="bg-[#effaf8]/50 border border-teal-100/80 rounded-2xl p-8 relative space-y-4">
+            <div className="bg-[#effaf8]/50 border border-teal-100/80 rounded-2xl p-5 sm:p-6 relative space-y-3">
               <div className="w-10 h-10 rounded-full bg-[#0f8672] text-white flex items-center justify-center font-bold text-base shadow-sm">
                 1
               </div>
@@ -529,7 +529,7 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* Step 2 */}
-            <div className="bg-[#effaf8]/50 border border-teal-100/80 rounded-2xl p-8 relative space-y-4">
+            <div className="bg-[#effaf8]/50 border border-teal-100/80 rounded-2xl p-6 sm:p-7 relative space-y-3">
               <div className="w-10 h-10 rounded-full bg-[#0f8672] text-white flex items-center justify-center font-bold text-base shadow-sm">
                 2
               </div>
@@ -542,7 +542,7 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* Step 3 */}
-            <div className="bg-[#effaf8]/50 border border-teal-100/80 rounded-2xl p-8 relative space-y-4">
+            <div className="bg-[#effaf8]/50 border border-teal-100/80 rounded-2xl p-6 sm:p-7 relative space-y-3">
               <div className="w-10 h-10 rounded-full bg-[#0f8672] text-white flex items-center justify-center font-bold text-base shadow-sm">
                 3
               </div>
@@ -558,9 +558,9 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* CUSTOMER REVIEWS SECTION (Approved reviews with text, photo, and video placeholders) */}
-      <section className="py-20 bg-slate-50/70 border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
+      <section className="py-6 sm:py-7 bg-slate-50/70 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-6">
             <div>
               <h2 className="text-xs font-bold uppercase tracking-widest text-[#0f8672] mb-2">
                 Real Patient Stories
@@ -584,7 +584,7 @@ export const HomePage: React.FC = () => {
           </div>
 
           {approvedReviews.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+            <div className="text-center py-7 bg-white rounded-2xl border border-slate-200">
               <p className="text-slate-500 text-sm">No approved reviews yet.</p>
             </div>
           ) : (
@@ -621,14 +621,18 @@ export const HomePage: React.FC = () => {
                           type="button"
                           onClick={() =>
                             setSelectedPhoto({
-                              url: rev.photoUrl || 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800',
+                              url: rev.photoUrl || '',
                               name: rev.reviewerName
                             })
                           }
-                          className="w-full text-left group overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 hover:bg-teal-50 transition-colors flex items-center gap-3"
+                          className="w-full text-left group overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 hover:bg-teal-50 transition-colors flex items-center gap-3 cursor-pointer"
                         >
                           <div className="w-14 h-14 rounded-lg bg-teal-100/80 flex items-center justify-center text-[#0f8672] shrink-0 overflow-hidden">
-                            <ImageIcon className="w-6 h-6" />
+                            {rev.photoUrl ? (
+                              <img src={rev.photoUrl} alt={rev.reviewerName} className="w-full h-full object-cover" />
+                            ) : (
+                              <ImageIcon className="w-6 h-6" />
+                            )}
                           </div>
                           <div>
                             <span className="text-xs font-semibold text-slate-900 group-hover:text-[#0f8672] flex items-center gap-1">
@@ -645,12 +649,8 @@ export const HomePage: React.FC = () => {
                       <div className="pt-2">
                         <button
                           type="button"
-                          onClick={() =>
-                            setSelectedVideo(
-                              rev.videoUrl || 'https://www.w3schools.com/html/mov_bbb.mp4'
-                            )
-                          }
-                          className="w-full text-left group overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 hover:bg-teal-50 transition-colors flex items-center gap-3"
+                          onClick={() => setSelectedVideo(rev.videoUrl || 'verified-clip')}
+                          className="w-full text-left group overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 hover:bg-teal-50 transition-colors flex items-center gap-3 cursor-pointer"
                         >
                           <div className="w-14 h-14 rounded-lg bg-[#0f8672] text-white flex items-center justify-center shrink-0">
                             <Play className="w-6 h-6 fill-white ml-0.5" />
@@ -696,26 +696,40 @@ export const HomePage: React.FC = () => {
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <h4 className="text-sm font-semibold">Video Testimonial Preview</h4>
               <button
+                type="button"
                 onClick={() => setSelectedVideo(null)}
-                className="text-slate-400 hover:text-white text-xs px-2 py-1 rounded"
+                className="text-slate-400 hover:text-white text-xs px-2 py-1 rounded cursor-pointer"
               >
                 Close ✕
               </button>
             </div>
             <div className="py-4">
-              <div className="rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
-                <video controls className="w-full h-full object-contain" autoPlay>
-                  <source src={selectedVideo} type="video/mp4" />
-                  Your browser does not support HTML video preview.
-                </video>
-              </div>
+              {selectedVideo !== 'verified-clip' ? (
+                <div className="rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
+                  <video controls className="w-full h-full object-contain" autoPlay>
+                    <source src={selectedVideo} type="video/mp4" />
+                    Your browser does not support HTML video preview.
+                  </video>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-slate-800/80 border border-slate-700 aspect-video flex flex-col items-center justify-center p-6 text-center space-y-2">
+                  <div className="w-12 h-12 rounded-full bg-[#0f8672] text-white flex items-center justify-center">
+                    <FileCheck2 className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-semibold text-white">Verified Family Video Testimonial</p>
+                  <p className="text-xs text-slate-300 max-w-xs">
+                    Private family testimonial archived with clinical consent for coordinator verification.
+                  </p>
+                </div>
+              )}
               <p className="text-xs text-slate-400 mt-3 text-center">
                 Short patient family testimonial clip verified by Nurse Care clinical coordinators.
               </p>
             </div>
             <button
+              type="button"
               onClick={() => setSelectedVideo(null)}
-              className="w-full py-2 bg-teal-600 hover:bg-teal-500 text-xs font-semibold rounded-lg text-white"
+              className="w-full py-2 bg-teal-600 hover:bg-teal-500 text-xs font-semibold rounded-lg text-white cursor-pointer"
             >
               Close Preview
             </button>
@@ -736,28 +750,40 @@ export const HomePage: React.FC = () => {
                 Feedback Photo - {selectedPhoto.name}
               </h4>
               <button
+                type="button"
                 onClick={() => setSelectedPhoto(null)}
-                className="text-slate-400 hover:text-slate-700 text-xs px-2 py-1 rounded"
+                className="text-slate-400 hover:text-slate-700 text-xs px-2 py-1 rounded cursor-pointer"
               >
                 Close ✕
               </button>
             </div>
             <div className="py-4">
-              <div className="rounded-xl overflow-hidden bg-[#effaf8] border border-teal-100 aspect-4/3 flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-teal-100 text-[#0f8672] flex items-center justify-center mb-3">
-                  <FileCheck2 className="w-8 h-8" />
+              {selectedPhoto.url ? (
+                <div className="rounded-xl overflow-hidden bg-slate-100 border border-slate-200 aspect-4/3 flex items-center justify-center">
+                  <img
+                    src={selectedPhoto.url}
+                    alt={`Care Snapshot - ${selectedPhoto.name}`}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <p className="text-xs font-semibold text-slate-800">
-                  Verified Patient Bedside Care Documented
-                </p>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Privacy-protected care log provided with consent by {selectedPhoto.name}.
-                </p>
-              </div>
+              ) : (
+                <div className="rounded-xl overflow-hidden bg-[#effaf8] border border-teal-100 aspect-4/3 flex flex-col items-center justify-center p-6 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-teal-100 text-[#0f8672] flex items-center justify-center mb-3">
+                    <FileCheck2 className="w-8 h-8" />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-800">
+                    Verified Patient Bedside Care Documented
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Privacy-protected care log provided with consent by {selectedPhoto.name}.
+                  </p>
+                </div>
+              )}
             </div>
             <button
+              type="button"
               onClick={() => setSelectedPhoto(null)}
-              className="w-full py-2 bg-[#0f8672] text-white hover:bg-[#0e6b5c] text-xs font-semibold rounded-lg"
+              className="w-full py-2 bg-[#0f8672] text-white hover:bg-[#0e6b5c] text-xs font-semibold rounded-lg cursor-pointer"
             >
               Close
             </button>
@@ -766,9 +792,9 @@ export const HomePage: React.FC = () => {
       )}
 
       {/* FAQ Accordion Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+      <section className="py-6 sm:py-7 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7">
+          <div className="text-center mb-6">
             <h2 className="text-xs font-bold uppercase tracking-widest text-[#0f8672] mb-2">
               Common Inquiries
             </h2>
@@ -817,8 +843,8 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Emergency Medical Disclaimer Banner (Explicitly required on Home) */}
-      <section className="py-12 bg-rose-50 border-y border-rose-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-6 bg-rose-50 border-y border-rose-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-7">
           <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
             <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
               <AlertOctagon className="w-8 h-8 stroke-[2.2]" />
@@ -842,8 +868,8 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Final Call to Action */}
-      <section className="py-16 bg-white text-center">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
+      <section className="py-6 sm:py-7 bg-white text-center">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-7 space-y-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
             Ready to arrange certified care for your family?
           </h2>

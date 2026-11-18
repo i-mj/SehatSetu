@@ -218,8 +218,8 @@ export const EnquiryPage: React.FC = () => {
       />
 
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/20 to-white pt-14 pb-10 border-b border-slate-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/20 to-white pt-7 pb-6 border-b border-slate-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold mb-3">
             <FileCheck2 className="w-3.5 h-3.5 text-[#0f8672]" />
             <span>Official Clinical Booking</span>
@@ -233,10 +233,10 @@ export const EnquiryPage: React.FC = () => {
         </div>
       </section>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 py-6 sm:py-7">
         {isSubmittedSuccess ? (
           /* Thank You / Confirmation State */
-          <div className="bg-[#effaf8] border border-teal-200/90 rounded-2xl p-8 sm:p-12 text-center space-y-6 shadow-sm animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[#effaf8] border border-teal-200/90 rounded-2xl p-6 sm:p-7 text-center space-y-6 shadow-sm animate-in fade-in zoom-in-95 duration-200">
             <div className="w-16 h-16 rounded-full bg-[#0f8672] text-white flex items-center justify-center mx-auto shadow-md">
               <CheckCircle2 className="w-9 h-9" />
             </div>
@@ -307,7 +307,7 @@ export const EnquiryPage: React.FC = () => {
           </div>
         ) : (
           /* Enquiry Form */
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-10 shadow-sm">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-sm">
             <form onSubmit={handleSubmit} noValidate className="space-y-6">
               {/* Honeypot field (hidden from accessibility tree & visual rendering) */}
               <div className="hidden" aria-hidden="true">
@@ -705,7 +705,7 @@ export const EnquiryPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full sm:w-auto px-8 py-3.5 bg-[#0f8672] hover:bg-[#0e6b5c] disabled:bg-slate-300 text-white font-semibold text-sm rounded-xl shadow-md transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-auto px-7 py-3.5 bg-[#0f8672] hover:bg-[#0e6b5c] disabled:bg-slate-300 text-white font-semibold text-sm rounded-xl shadow-md transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>

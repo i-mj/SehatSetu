@@ -257,8 +257,8 @@ export const FeedbacksPage: React.FC = () => {
       />
 
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-[#effaf8]/80 via-[#effaf8]/30 to-white pt-16 pb-12 border-b border-slate-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+      <section className="bg-gradient-to-b from-[#effaf8]/80 via-[#effaf8]/30 to-white pt-7 pb-6 border-b border-slate-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold">
             <Heart className="w-3.5 h-3.5 text-[#0f8672] fill-[#0f8672]" />
             <span>Real Patient Experiences</span>
@@ -301,10 +301,10 @@ export const FeedbacksPage: React.FC = () => {
       </section>
 
       {/* Main Reviews Display Section (SEVA AT HOME STYLE) */}
-      <section className="py-14 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-7 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
           {/* Category Filter Pills */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-10">
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
             <button
               type="button"
               onClick={() => setSelectedCategory('ALL')}
@@ -364,7 +364,7 @@ export const FeedbacksPage: React.FC = () => {
 
           {/* Testimonial Cards Grid */}
           {filteredReviews.length === 0 ? (
-            <div className="text-center py-16 bg-slate-50 rounded-3xl border border-slate-200 max-w-lg mx-auto">
+            <div className="text-center py-7 bg-slate-50 rounded-3xl border border-slate-200 max-w-lg mx-auto">
               <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-2" />
               <p className="text-sm font-bold text-slate-800">No testimonials found in this category</p>
               <p className="text-xs text-slate-400 mt-1">Please select "All Testimonials" or be the first to share your experience.</p>
@@ -486,9 +486,9 @@ export const FeedbacksPage: React.FC = () => {
       {/* ========================================================= */}
       {/* REVIEW SUBMISSION FORM POSITIONED BELOW REVIEWS */}
       {/* ========================================================= */}
-      <section id="share-feedback" className="py-16 bg-slate-50/70 border-t border-slate-200 scroll-mt-10">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 space-y-2">
+      <section id="share-feedback" className="py-7 bg-slate-50/70 border-t border-slate-200 scroll-mt-10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-7">
+          <div className="text-center mb-6 space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold">
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Share Your Story</span>
@@ -502,7 +502,7 @@ export const FeedbacksPage: React.FC = () => {
           </div>
 
           {submittedSuccess ? (
-            <div className="bg-white border-2 border-teal-300 rounded-3xl p-8 sm:p-10 text-center space-y-5 shadow-sm animate-in fade-in duration-200">
+            <div className="bg-white border border-teal-200 rounded-3xl p-6 sm:p-7 text-center space-y-5 shadow-sm animate-in fade-in duration-200">
               <div className="w-14 h-14 rounded-full bg-[#0f8672] text-white flex items-center justify-center mx-auto shadow-sm">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
@@ -525,7 +525,7 @@ export const FeedbacksPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-sm">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 shadow-sm">
               {formError && (
                 <div className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />

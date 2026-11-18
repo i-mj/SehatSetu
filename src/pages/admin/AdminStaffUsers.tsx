@@ -12,7 +12,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PageSeo } from '../../components/common/PageSeo';
-import { StaffDepartment, StaffRecord, StaffShift, StaffStatus, Document, StaffLoginRole } from '../../types';
+import { ProfileAvatarUploader } from '../../components/common/ProfileAvatarUploader';
+import { AdminUser, AdminUserStatus, StaffDepartment, StaffRecord, StaffShift, StaffStatus, Document, StaffLoginRole } from '../../types';
 import {
   Users,
   UserPlus,
@@ -49,6 +50,7 @@ export const AdminStaffUsers: React.FC = () => {
   const {
     adminUsers,
     currentAdminUser,
+    updateAdminUser,
     staffRecords,
     addStaffRecord,
     updateStaffRecord,
@@ -82,9 +84,19 @@ export const AdminStaffUsers: React.FC = () => {
   const [formEmergencyContact, setFormEmergencyContact] = useState('');
   const [formJoinDate, setFormJoinDate] = useState(new Date().toISOString().substring(0, 10));
   const [formNotes, setFormNotes] = useState('');
+  const [formAvatarUrl, setFormAvatarUrl] = useState('');
   const [formCanLogin, setFormCanLogin] = useState(false);
   const [formLoginRole, setFormLoginRole] = useState<StaffLoginRole>('STAFF');
   const [formPassword, setFormPassword] = useState('staff123');
+
+  // Super Admin Inspect / Edit Admin Modal State
+  const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+  const [adminFormFullName, setAdminFormFullName] = useState('');
+  const [adminFormEmail, setAdminFormEmail] = useState('');
+  const [adminFormPhone, setAdminFormPhone] = useState('');
+  const [adminFormDesignation, setAdminFormDesignation] = useState('');
+  const [adminFormStatus, setAdminFormStatus] = useState<AdminUserStatus>('ACTIVE');
+  const [adminFormAvatarUrl, setAdminFormAvatarUrl] = useState('');
 
   // Staff Dossier & Document Management State
   const [dossierStaffId, setDossierStaffId] = useState<string | null>(null);
@@ -162,6 +174,7 @@ export const AdminStaffUsers: React.FC = () => {
     setFormEmergencyContact('');
     setFormJoinDate(new Date().toISOString().substring(0, 10));
     setFormNotes('');
+    setFormAvatarUrl('');
     setFormCanLogin(false);
     setFormLoginRole('STAFF');
     setFormPassword('staff123');
@@ -183,6 +196,7 @@ export const AdminStaffUsers: React.FC = () => {
     setFormEmergencyContact(staff.emergencyContact || '');
     setFormJoinDate(staff.joinDate || '');
     setFormNotes(staff.notes || '');
+    setFormAvatarUrl(staff.avatarUrl || '');
     setFormCanLogin(staff.canLogin || false);
     setFormLoginRole(
       staff.loginRole ||
@@ -214,6 +228,7 @@ export const AdminStaffUsers: React.FC = () => {
       emergencyContact: formEmergencyContact.trim() || undefined,
       joinDate: formJoinDate || new Date().toISOString().substring(0, 10),
       notes: formNotes.trim() || undefined,
+      avatarUrl: formAvatarUrl || undefined,
       canLogin: formCanLogin,
       loginRole: formCanLogin ? formLoginRole : undefined,
       password: formCanLogin ? (formPassword.trim() || 'staff123') : undefined
@@ -244,12 +259,41 @@ export const AdminStaffUsers: React.FC = () => {
       emergencyContact: formEmergencyContact.trim() || undefined,
       joinDate: formJoinDate,
       notes: formNotes.trim() || undefined,
+      avatarUrl: formAvatarUrl || undefined,
       canLogin: formCanLogin,
       loginRole: formCanLogin ? formLoginRole : undefined,
       password: formCanLogin ? (formPassword.trim() || 'staff123') : undefined
     });
 
     setEditingStaff(null);
+  };
+
+  const openEditAdminModal = (admin: AdminUser) => {
+    setEditingAdmin(admin);
+    setAdminFormFullName(admin.fullName);
+    setAdminFormEmail(admin.email);
+    setAdminFormPhone(admin.phone || '');
+    setAdminFormDesignation(admin.designation || '');
+    setAdminFormStatus(admin.status);
+    setAdminFormAvatarUrl(admin.avatarUrl || '');
+  };
+
+  const handleSaveAdminInspection = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAdmin) return;
+    if (!adminFormFullName.trim() || !adminFormEmail.trim()) {
+      addToast('Validation Error', 'Administrator name and email are required.', 'error');
+      return;
+    }
+    updateAdminUser(editingAdmin.id, {
+      fullName: adminFormFullName.trim(),
+      email: adminFormEmail.trim().toLowerCase(),
+      phone: adminFormPhone.trim(),
+      designation: adminFormDesignation.trim(),
+      status: editingAdmin.id === currentAdminUser?.id ? 'ACTIVE' : adminFormStatus,
+      avatarUrl: adminFormAvatarUrl
+    });
+    setEditingAdmin(null);
   };
 
   // Filtered staff records
@@ -269,17 +313,20 @@ export const AdminStaffUsers: React.FC = () => {
     return matchesSearch && matchesDepartment && matchesShift;
   });
 
-  const activeAdmins = adminUsers.slice(0, 2);
+  const isSuperAdmin = currentAdminUser?.role === 'SUPER_ADMIN';
+  const visibleAdmins = isSuperAdmin
+    ? adminUsers.slice(0, 2)
+    : adminUsers.filter((a) => a.id === currentAdminUser?.id);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 max-w-7xl mx-auto pb-6">
       <PageSeo
         title="Staff Records & Access Governance - Nurse Care Admin"
         description="Internal staff directory, personnel management, and system administration access control."
       />
 
       {/* Page Title & System Policy Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-[#0f8672] text-xs font-semibold mb-2">
             <Lock className="w-3.5 h-3.5" />
@@ -289,7 +336,7 @@ export const AdminStaffUsers: React.FC = () => {
             Staff Directory & Records
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 mt-1">
-            Maintain internal employee records, shift assignments, and credentials. Only the 2 designated Administrators have system access.
+            Maintain internal employee records, shift assignments, profile photos, and credentials.
           </p>
         </div>
 
@@ -303,71 +350,132 @@ export const AdminStaffUsers: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* SECTION 1: STRICTLY 2 SYSTEM ADMINISTRATORS (CALLOUT & CREDENTIALS CARD) */}
+      {/* SECTION 1: ADMINISTRATOR OVERSIGHT (SUPER ADMIN SEES BOTH; ADMIN 2 SEES SELF ONLY) */}
       {/* ========================================================================= */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-7 shadow-lg border border-slate-700/60 relative overflow-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-5 sm:p-6 shadow-lg border border-slate-700/60 relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-500/20 text-teal-300 rounded-full text-xs font-bold border border-teal-500/30">
               <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
-              <span>Two Authorized System Administrators (2/2)</span>
+              <span>
+                {isSuperAdmin
+                  ? 'Super Admin Oversight — Both Administrators (2/2)'
+                  : 'Your Authorized Administrator Profile'}
+              </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-              Privileged Console Access
+              {isSuperAdmin ? 'Privileged Console Access & Audit' : 'Personal Administrator Account'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              In accordance with clinical safety governance, <strong>only these 2 administrator accounts</strong> possess login credentials to access the admin console, manage bookings, and edit site settings. All staff records below are managed internally for operations and dispatch.
+              {isSuperAdmin ? (
+                <>
+                  As <strong>Super Admin</strong>, you can review profiles, login activity, status, and profile pictures for both system administrators. The second administrator sees only their own account record here while sharing full operational console access.
+                </>
+              ) : (
+                <>
+                  You have full operational access to all clinical, contact, finance, and staff workflows. Only the Super Admin can view or modify other administrator accounts.
+                </>
+              )}
             </p>
           </div>
 
           <div className="shrink-0 flex items-center gap-3">
             <Link
               to="/admin/account"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors whitespace-nowrap shrink-0"
             >
               <Key className="w-4 h-4" />
-              <span>Manage Admin Account</span>
+              <span>Manage My Account</span>
             </Link>
           </div>
         </div>
 
-        {/* 2 Admins Visual Roster */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-700/70">
-          {activeAdmins.map((admin, idx) => (
+        {/* Admin Roster Cards (Both for Super Admin, Self Only for Admin 2) */}
+        <div
+          className={`grid grid-cols-1 ${
+            visibleAdmins.length > 1 ? 'md:grid-cols-2' : ''
+          } gap-4 mt-5 pt-5 border-t border-slate-700/70`}
+        >
+          {visibleAdmins.map((admin) => (
             <div
               key={admin.id}
-              className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex items-center justify-between gap-4"
+              className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
-              <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-[#0f8672] text-white flex items-center justify-center font-bold text-base shadow-inner shrink-0">
-                  {admin.fullName
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')
-                    .substring(0, 2)
-                    .toUpperCase()}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-white">{admin.fullName}</span>
-                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-teal-400/20 text-teal-300 border border-teal-400/30">
-                      Admin 0{idx + 1}
+              <div className="flex items-center gap-3.5 min-w-0">
+                {admin.avatarUrl ? (
+                  <img
+                    src={admin.avatarUrl}
+                    alt={admin.fullName}
+                    className="w-12 h-12 rounded-2xl object-cover border border-slate-600 shadow-inner shrink-0 bg-white"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-[#0f8672] text-white flex items-center justify-center font-bold text-base shadow-inner shrink-0">
+                    {admin.fullName
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')
+                      .substring(0, 2)
+                      .toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-sm text-white truncate">{admin.fullName}</span>
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-teal-400/20 text-teal-300 border border-teal-400/30 whitespace-nowrap shrink-0">
+                      {admin.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Clinical Admin'}
                     </span>
+                    {admin.status === 'INACTIVE' && (
+                      <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        Inactive
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">{admin.designation || 'System Administrator'}</div>
-                  <div className="text-[11px] text-teal-300/90 font-mono mt-1 flex items-center gap-1.5">
-                    <Mail className="w-3 h-3 text-teal-400 shrink-0" />
-                    <span>{admin.email}</span>
+                  <div className="text-xs text-slate-400 mt-0.5 truncate">
+                    {admin.designation || 'System Administrator'}
                   </div>
+                  <div className="text-[11px] text-teal-300/90 font-mono mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                    <span className="inline-flex items-center gap-1">
+                      <Mail className="w-3 h-3 text-teal-400 shrink-0" />
+                      <span>{admin.email}</span>
+                    </span>
+                    {admin.phone && (
+                      <span className="inline-flex items-center gap-1 text-slate-300 tabular-nums">
+                        <Phone className="w-3 h-3 text-teal-400 shrink-0" />
+                        <span>{admin.phone}</span>
+                      </span>
+                    )}
+                  </div>
+                  {admin.lastLogin && (
+                    <div className="text-[10px] text-slate-400 mt-1 tabular-nums">
+                      Last Login:{' '}
+                      {new Date(admin.lastLogin).toLocaleString('en-IN', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short'
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="text-right shrink-0">
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Authorized</span>
+              <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
+                <span
+                  className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
+                    admin.status === 'INACTIVE' ? 'text-rose-400' : 'text-emerald-400'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                  <span>{admin.status === 'INACTIVE' ? 'Deactivated' : 'Authorized'}</span>
                 </span>
-                <div className="text-[10px] text-slate-400 mt-1">Full System Access</div>
+                {isSuperAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => openEditAdminModal(admin)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-[11px] font-semibold rounded-xl border border-slate-600 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                  >
+                    <Edit2 className="w-3 h-3 text-teal-300" />
+                    <span>Inspect & Edit</span>
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -467,7 +575,7 @@ export const AdminStaffUsers: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {filteredStaff.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-12 text-slate-500">
+                    <td colSpan={8} className="text-center py-7 text-slate-500">
                       <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                       <p className="font-semibold text-slate-700">No staff personnel records found</p>
                       <p className="text-xs text-slate-400 mt-1">Try adjusting your search criteria or add a new record.</p>
@@ -479,9 +587,17 @@ export const AdminStaffUsers: React.FC = () => {
                       {/* Employee Info */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 text-[#0f8672] flex items-center justify-center font-bold text-xs shrink-0">
-                            {staff.fullName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()}
-                          </div>
+                          {staff.avatarUrl ? (
+                            <img
+                              src={staff.avatarUrl}
+                              alt={staff.fullName}
+                              className="w-9 h-9 rounded-xl object-cover border border-teal-200 bg-white shrink-0"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 text-[#0f8672] flex items-center justify-center font-bold text-xs shrink-0">
+                              {staff.fullName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()}
+                            </div>
+                          )}
                           <div>
                             <div className="font-bold text-slate-900">{staff.fullName}</div>
                             <div className="text-[11px] font-mono text-slate-500">{staff.employeeCode}</div>
@@ -620,8 +736,8 @@ export const AdminStaffUsers: React.FC = () => {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl relative space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
               <div>
                 <h3 className="text-base font-bold text-slate-900">
                   {editingStaff ? 'Edit Staff Personnel Record' : 'Add New Staff Record'}
@@ -636,7 +752,7 @@ export const AdminStaffUsers: React.FC = () => {
                   setIsAddModalOpen(false);
                   setEditingStaff(null);
                 }}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -644,8 +760,17 @@ export const AdminStaffUsers: React.FC = () => {
 
             <form
               onSubmit={editingStaff ? handleUpdateStaff : handleCreateStaff}
-              className="space-y-4 text-xs"
+              className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-xs"
             >
+              <ProfileAvatarUploader
+                avatarUrl={formAvatarUrl}
+                fullName={formFullName || 'Staff Member'}
+                onChange={setFormAvatarUrl}
+                size="md"
+                label="Staff Profile Picture"
+                helperText="Upload a JPG, PNG, or WebP headshot directly from your device."
+              />
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">
@@ -1013,14 +1138,14 @@ export const AdminStaffUsers: React.FC = () => {
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl relative space-y-5 max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between pb-3 border-b border-slate-100 gap-3">
-              <div className="flex items-center gap-3">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Fixed Modal Header */}
+            <div className="flex items-start justify-between px-6 sm:px-7 py-4 border-b border-slate-100 gap-3 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-11 h-11 rounded-2xl bg-teal-50 border border-teal-200 text-[#0f8672] flex items-center justify-center font-bold text-sm shrink-0">
                   {dossierStaff.fullName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-base font-bold text-slate-900">{dossierStaff.fullName}</h3>
                     <span className="font-mono text-xs text-slate-400">({dossierStaff.employeeCode})</span>
@@ -1036,11 +1161,13 @@ export const AdminStaffUsers: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setDossierStaffId(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            <div className="flex-1 overflow-y-auto px-6 sm:px-7 py-5 space-y-5">
 
             {/* Section 1: Login Credentials & Access Control */}
             <div className="p-4 bg-purple-50/70 border border-purple-200 rounded-2xl space-y-3">
@@ -1214,6 +1341,145 @@ export const AdminStaffUsers: React.FC = () => {
                 Close Dossier
               </button>
             </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: SUPER ADMIN INSPECT & EDIT ADMIN ACCOUNT */}
+      {/* ========================================================================= */}
+      {isSuperAdmin && editingAdmin && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Inspect & Edit Administrator
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Super Admin oversight for {editingAdmin.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Clinical Admin'} account
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingAdmin(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleSaveAdminInspection}
+              className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-xs"
+            >
+              <ProfileAvatarUploader
+                avatarUrl={adminFormAvatarUrl}
+                fullName={adminFormFullName}
+                onChange={setAdminFormAvatarUrl}
+                size="md"
+                label="Administrator Profile Picture"
+              />
+
+              {/* Activity Summary */}
+              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl tabular-nums">
+                <div>
+                  <div className="text-[10px] font-semibold text-slate-500">Account Created</div>
+                  <div className="text-xs font-bold text-slate-800 mt-0.5">
+                    {new Date(editingAdmin.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-semibold text-slate-500">Last Active Login</div>
+                  <div className="text-xs font-bold text-slate-800 mt-0.5">
+                    {editingAdmin.lastLogin
+                      ? new Date(editingAdmin.lastLogin).toLocaleString('en-IN', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        })
+                      : 'Not recorded'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={adminFormFullName}
+                    onChange={(e) => setAdminFormFullName(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus-visible:outline-teal-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Official Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={adminFormEmail}
+                    onChange={(e) => setAdminFormEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus-visible:outline-teal-700"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={adminFormPhone}
+                    onChange={(e) => setAdminFormPhone(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus-visible:outline-teal-700 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Account Status</label>
+                  <select
+                    value={adminFormStatus}
+                    disabled={editingAdmin.id === currentAdminUser?.id}
+                    onChange={(e) => setAdminFormStatus(e.target.value as AdminUserStatus)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus-visible:outline-teal-700 disabled:opacity-60"
+                  >
+                    <option value="ACTIVE">Active (Authorized)</option>
+                    <option value="INACTIVE">Inactive (Suspended)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Clinical Title / Designation</label>
+                <input
+                  type="text"
+                  value={adminFormDesignation}
+                  onChange={(e) => setAdminFormDesignation(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus-visible:outline-teal-700"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingAdmin(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-semibold text-white bg-[#0f8672] hover:bg-[#0e6b5c] rounded-xl cursor-pointer"
+                >
+                  Save Admin Details
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

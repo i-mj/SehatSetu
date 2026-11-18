@@ -25,12 +25,14 @@ import {
   Stethoscope,
   User,
   UserCheck,
-  DollarSign
+  DollarSign,
+  Inbox,
+  Activity
 } from 'lucide-react';
 import { GoogleSheetsSyncModal } from '../../components/admin/GoogleSheetsSyncModal';
 
 export const AdminLayout: React.FC = () => {
-  const { isAdminLoggedIn, adminLogout, settings, enquiries, nurses, reviews, googleSheetId, currentAdminUser } = useApp();
+  const { isAdminLoggedIn, adminLogout, settings, enquiries, nurses, reviews, contactMessages, googleSheetId, currentAdminUser } = useApp();
   const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
@@ -47,9 +49,13 @@ export const AdminLayout: React.FC = () => {
 
   // Badge counts
   const newEnquiriesCount = enquiries.filter((e) => e.stage === 'NEW').length;
+  const newContactCount = contactMessages.filter(
+    (m) => (m.status || 'NEW') === 'NEW' || m.status === 'PENDING'
+  ).length;
   const pendingNursesCount = nurses.filter((n) => n.status === 'PENDING').length;
   const pendingReviewsCount = reviews.filter((r) => r.status === 'PENDING').length;
 
+  const isSuperAdmin = currentAdminUser?.role === 'SUPER_ADMIN';
   const isStaffUser = currentAdminUser?.role === 'STAFF';
   const isFinanceUser = currentAdminUser?.role === 'FINANCE';
   const { pathname } = useLocation();
@@ -64,6 +70,11 @@ export const AdminLayout: React.FC = () => {
   const financeAllowedPaths = ['/admin/finances', '/admin/account'];
   if (isFinanceUser && !financeAllowedPaths.some((p) => pathname.startsWith(p))) {
     return <Navigate to="/admin/finances" replace />;
+  }
+
+  // Activity Logs is strictly restricted to Super Admin
+  if (pathname.startsWith('/admin/activity-logs') && !isSuperAdmin) {
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   const navItems = isFinanceUser
@@ -116,6 +127,12 @@ export const AdminLayout: React.FC = () => {
           badge: newEnquiriesCount > 0 ? `${newEnquiriesCount} new` : null
         },
         {
+          to: '/admin/contact-messages',
+          label: 'Contact Enquiries',
+          icon: Inbox,
+          badge: newContactCount > 0 ? `${newContactCount} open` : null
+        },
+        {
           to: '/admin/nurses',
           label: 'Nurses',
           icon: Users,
@@ -151,6 +168,16 @@ export const AdminLayout: React.FC = () => {
           icon: UserCheck,
           badge: null
         },
+        ...(isSuperAdmin
+          ? [
+              {
+                to: '/admin/activity-logs',
+                label: 'Activity Logs',
+                icon: Activity,
+                badge: null
+              }
+            ]
+          : []),
         {
           to: '/admin/account',
           label: 'Admin Account',
@@ -170,9 +197,17 @@ export const AdminLayout: React.FC = () => {
       {/* Mobile Top Bar */}
       <div className="md:hidden bg-slate-900 text-white px-4 py-3 flex items-center justify-between border-b border-slate-800">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#0f8672] flex items-center justify-center text-white">
-            <HeartPulse className="w-5 h-5" />
-          </div>
+          {currentAdminUser?.avatarUrl ? (
+            <img
+              src={currentAdminUser.avatarUrl}
+              alt={currentAdminUser.fullName}
+              className="w-8 h-8 rounded-lg object-cover border border-slate-700"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-[#0f8672] flex items-center justify-center text-white">
+              <HeartPulse className="w-5 h-5" />
+            </div>
+          )}
           <span className="font-bold text-sm tracking-tight">{settings.siteName} Admin</span>
         </div>
         <button
@@ -184,24 +219,41 @@ export const AdminLayout: React.FC = () => {
         </button>
       </div>
 
+      {/* Mobile Backdrop for Sidebar Drawer */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 md:hidden transition-opacity"
+          onClick={() => setMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar Navigation */}
       <aside
         className={`fixed md:sticky top-0 left-0 h-screen w-64 bg-slate-900 text-slate-300 flex flex-col justify-between z-40 transition-transform duration-200 ease-in-out ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <div>
+        <div className="flex-1 overflow-y-auto">
           {/* Brand Wordmark & Role */}
-          <div className="p-6 border-b border-slate-800">
+          <div className="p-5 border-b border-slate-800">
             <Link
               to={isFinanceUser ? '/admin/finances' : isStaffUser ? '/admin/enquiries' : '/admin/dashboard'}
               className="flex items-center gap-2.5 text-white focus-visible:outline-teal-500 rounded"
             >
-              <div className="w-9 h-9 rounded-xl bg-[#0f8672] flex items-center justify-center text-white shadow">
-                <HeartPulse className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="font-bold text-sm tracking-tight text-white leading-none">
+              {currentAdminUser?.avatarUrl ? (
+                <img
+                  src={currentAdminUser.avatarUrl}
+                  alt={currentAdminUser.fullName}
+                  className="w-10 h-10 rounded-xl object-cover border border-slate-700 shadow shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-[#0f8672] flex items-center justify-center text-white shadow shrink-0">
+                  <HeartPulse className="w-5 h-5" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="font-bold text-sm tracking-tight text-white leading-none truncate">
                   {settings.siteName}
                 </div>
                 {isFinanceUser ? (
@@ -308,7 +360,7 @@ export const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-7 overflow-y-auto">
         <Outlet />
       </main>
 

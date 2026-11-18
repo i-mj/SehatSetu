@@ -8,7 +8,7 @@ import { AlertCircle } from 'lucide-react';
 
 export const TestContentBanner: React.FC<{ pageName: string }> = ({ pageName }) => {
   return (
-    <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-8 rounded-r-lg" role="alert">
+    <div className="bg-amber-50 border border-amber-200 p-4 mb-6 rounded-xl" role="alert">
       <div className="flex items-start">
         <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0 mr-3" />
         <div className="text-sm text-amber-900">
