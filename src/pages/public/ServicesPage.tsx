@@ -11,23 +11,11 @@ import { useApp } from '../../context/AppContext';
 import { PageSeo } from '../../components/common/PageSeo';
 import { NursingServicesGrid } from '../../components/common/NursingServicesGrid';
 import {
-  HeartHandshake,
-  ShieldAlert,
-  Syringe,
-  UserCheck,
-  Clock,
-  HeartPulse,
-  Activity,
-  Stethoscope,
   CheckCircle2,
-  ChevronDown,
   ArrowRight,
-  HelpCircle,
   FileText,
   MapPin,
   Search,
-  Sparkles,
-  Check,
   Clock3,
   ShieldCheck
 } from 'lucide-react';
@@ -35,10 +23,6 @@ import {
 export const ServicesPage: React.FC = () => {
   const { settings, services, serviceLocations } = useApp();
   const location = useLocation();
-  const [openFaqKeys, setOpenFaqKeys] = useState<{ [key: string]: boolean }>({
-    'srv-1-0': true,
-    'srv-2-0': true
-  });
 
   // Coverage search state
   const [searchAreaQuery, setSearchAreaQuery] = useState('');
@@ -68,34 +52,6 @@ export const ServicesPage: React.FC = () => {
       }
     }
   }, [location.hash]);
-
-  const toggleFaq = (key: string) => {
-    setOpenFaqKeys((prev) => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
-  const getServiceIcon = (name: string) => {
-    switch (name) {
-      case 'HeartHandshake':
-        return <HeartHandshake className="w-7 h-7 text-[#0f8672]" />;
-      case 'ShieldAlert':
-        return <ShieldAlert className="w-7 h-7 text-[#0f8672]" />;
-      case 'Syringe':
-        return <Syringe className="w-7 h-7 text-[#0f8672]" />;
-      case 'UserCheck':
-        return <UserCheck className="w-7 h-7 text-[#0f8672]" />;
-      case 'HeartPulse':
-        return <HeartPulse className="w-7 h-7 text-[#0f8672]" />;
-      case 'Activity':
-        return <Activity className="w-7 h-7 text-[#0f8672]" />;
-      case 'Stethoscope':
-        return <Stethoscope className="w-7 h-7 text-[#0f8672]" />;
-      default:
-        return <Clock className="w-7 h-7 text-[#0f8672]" />;
-    }
-  };
 
   // Search match logic for coverage checker
   const matchedLocation = useMemo(() => {
@@ -221,20 +177,11 @@ export const ServicesPage: React.FC = () => {
 
           {/* Quick Anchor Navigation */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-            {activeServices.map((srv) => (
-              <a
-                key={srv.id}
-                href={`#${srv.slug}`}
-                className="px-3.5 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-teal-50 hover:text-[#0f8672] border border-slate-200 rounded-lg transition-colors shadow-2xs"
-              >
-                {srv.title}
-              </a>
-            ))}
             <a
               href="#coverage-locations"
-              className="px-3.5 py-1.5 text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-colors shadow-2xs flex items-center gap-1"
+              className="px-4 py-2 text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-colors shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
             >
-              <MapPin className="w-3 h-3 text-[#0f8672]" />
+              <MapPin className="w-3.5 h-3.5 text-[#0f8672]" />
               <span>Available Locations</span>
             </a>
           </div>
@@ -416,176 +363,6 @@ export const ServicesPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Services List Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7 py-7 space-y-12">
-        {activeServices.map((service, idx) => {
-          // Resolve location names for this service
-          const serviceLocationItems = service.locations && service.locations.length > 0
-            ? activeLocations.filter((l) => service.locations?.includes(l.id))
-            : activeLocations;
-
-          return (
-            <section
-              key={service.id}
-              id={service.slug}
-              className="scroll-mt-28 border-b border-slate-200/80 pb-7 last:border-b-0 last:pb-0"
-            >
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                {/* Left Column: Service Details & Features */}
-                <div className="lg:col-span-7 space-y-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-[#effaf8] border border-teal-100 flex items-center justify-center shrink-0">
-                      {getServiceIcon(service.iconName)}
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-[#0f8672] uppercase tracking-wider">
-                        Service 0{idx + 1}
-                      </span>
-                      <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                        {service.title}
-                      </h2>
-                    </div>
-                  </div>
-
-                  <p className="text-slate-600 text-base leading-relaxed">
-                    {service.fullDescription}
-                  </p>
-
-                  {/* Pricing / Shift Arrangement Badge */}
-                  {service.pricingNote && (
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-teal-50 border border-teal-100 text-[#0e6b5c] text-xs font-semibold">
-                      <Clock className="w-3.5 h-3.5 text-[#0f8672]" />
-                      <span>Arrangement: {service.pricingNote}</span>
-                    </div>
-                  )}
-
-                  {/* LOCATIONS WHERE THIS SERVICE IS AVAILABLE */}
-                  <div className="p-4 bg-slate-50/90 rounded-2xl border border-slate-200/80 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-[#0f8672]" />
-                        <span>Locations Where {service.title} is Available:</span>
-                      </span>
-                      <span className="text-slate-500 text-[11px]">
-                        {serviceLocationItems.length} active coverage zones
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {serviceLocationItems.map((loc) => (
-                        <Link
-                          key={loc.id}
-                          to={`/enquiry?service=${service.id}&area=${encodeURIComponent(loc.name)}`}
-                          className="px-2.5 py-1 bg-white hover:bg-teal-50 text-slate-700 hover:text-[#0f8672] border border-slate-200 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 shadow-2xs"
-                          title={`Book ${service.title} in ${loc.name} (${loc.responseEta})`}
-                        >
-                          <MapPin className="w-3 h-3 text-[#0f8672] shrink-0" />
-                          <span>{loc.name}</span>
-                          <span className="text-[10px] text-slate-400">({loc.responseEta.replace('Within ', '')})</span>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Key clinical inclusions */}
-                  <div className="space-y-3 pt-2">
-                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Key Procedures & Inclusions
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {service.bulletPoints.map((point, pIdx) => (
-                        <div
-                          key={pIdx}
-                          className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-700"
-                        >
-                          <CheckCircle2 className="w-4 h-4 text-[#0f8672] shrink-0 mt-0.5" />
-                          <span className="leading-snug">{point}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pt-4 flex flex-wrap items-center gap-4">
-                    <Link
-                      to={`/enquiry?service=${service.id}`}
-                      className="inline-flex items-center gap-2 px-6 py-3 bg-[#0f8672] hover:bg-[#0e6b5c] text-white text-xs font-semibold rounded-xl shadow-sm transition-colors"
-                    >
-                      <span>Book {service.title}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-
-                    <Link
-                      to="/contact-us"
-                      className="px-5 py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
-                    >
-                      Ask a Coordinator
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Right Column: Service Specific FAQs */}
-                <div className="lg:col-span-5 bg-slate-50/70 border border-slate-200/80 rounded-2xl p-6 sm:p-7 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 pb-4 border-b border-slate-200 mb-5">
-                      <HelpCircle className="w-5 h-5 text-[#0f8672]" />
-                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                        {service.title} FAQs
-                      </h3>
-                    </div>
-
-                    <div className="space-y-3">
-                      {service.faqs.map((faq, fIdx) => {
-                        const faqKey = `${service.id}-${fIdx}`;
-                        const isOpen = !!openFaqKeys[faqKey];
-
-                        return (
-                          <div
-                            key={fIdx}
-                            className="bg-white border border-slate-200/80 rounded-xl overflow-hidden transition-all duration-150"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => toggleFaq(faqKey)}
-                              className="w-full px-4 py-3 text-left flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
-                              aria-expanded={isOpen}
-                            >
-                              <span className="text-xs font-semibold text-slate-900 leading-snug">
-                                {faq.question}
-                              </span>
-                              <ChevronDown
-                                className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${
-                                  isOpen ? 'rotate-180 text-[#0f8672]' : ''
-                                }`}
-                              />
-                            </button>
-
-                            {isOpen && (
-                              <div className="px-4 pb-3.5 pt-1 text-xs text-slate-600 leading-relaxed border-t border-slate-100 bg-[#effaf8]/30">
-                                {faq.answer}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-4 border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between">
-                    <span>Prescription required for clinical drugs</span>
-                    <Link
-                      to="/enquiry"
-                      className="text-[#0f8672] font-semibold hover:underline"
-                    >
-                      Enquiry Now →
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </section>
-          );
-        })}
-      </div>
-
       {/* Custom Care Note */}
       <section className="py-7 bg-[#effaf8]/60 border-t border-teal-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 text-center space-y-4">
@@ -597,10 +374,10 @@ export const ServicesPage: React.FC = () => {
           </p>
           <div className="pt-2">
             <Link
-              to="/contact-us"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#0f8672] hover:bg-[#0e6b5c] text-white text-xs font-semibold rounded-xl shadow transition-colors"
+              to="/enquiry"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#0f8672] hover:bg-[#0e6b5c] text-white text-xs font-semibold rounded-xl shadow transition-colors whitespace-nowrap shrink-0"
             >
-              <span>Schedule Clinical Assessment</span>
+              <span>Enquiry Now</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

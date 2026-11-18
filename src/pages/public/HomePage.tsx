@@ -496,8 +496,8 @@ export const HomePage: React.FC = () => {
       </section>
 
 
-      {/* Services Section - Styled to match exact reference image */}
-      <NursingServicesGrid showLocationStrip={true} />
+      {/* Services Section - Single-line horizontally scrollable showcase on Home */}
+      <NursingServicesGrid showLocationStrip={true} layout="horizontal" />
 
       {/* "How it Works" in 3 Steps */}
       <section className="py-6 sm:py-7 bg-white">

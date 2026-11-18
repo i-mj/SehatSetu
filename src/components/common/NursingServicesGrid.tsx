@@ -7,9 +7,23 @@
  * - 4-Card Responsive Grid with pastel mint illustration block & clean typography card
  */
 
-import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, MapPin, X, CheckCircle2, Clock, HeartPulse, Activity, Stethoscope, ShieldCheck } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle,
+  MapPin,
+  X,
+  CheckCircle2,
+  Clock,
+  HeartPulse,
+  Activity,
+  Stethoscope,
+  ShieldCheck
+} from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ServiceItem } from '../../types';
 
@@ -127,9 +141,22 @@ export const IvTherapyIllustration: React.FC<{ className?: string }> = ({ classN
 export const NursingServicesGrid: React.FC<{
   showLocationStrip?: boolean;
   isServicePage?: boolean;
-}> = ({ showLocationStrip = true, isServicePage = false }) => {
+  layout?: 'grid' | 'horizontal';
+}> = ({ showLocationStrip = true, isServicePage = false, layout = 'grid' }) => {
   const { services, serviceLocations } = useApp();
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
+  const [openModalFaqIndex, setOpenModalFaqIndex] = useState<number | null>(0);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const handleOpenServiceSummary = (service: ServiceItem) => {
+    setSelectedService(service);
+    setOpenModalFaqIndex(0);
+  };
+  const [scrollState, setScrollState] = useState({
+    canScrollPrev: false,
+    canScrollNext: false,
+    hasOverflow: false
+  });
 
   const getIllustrationForService = (service: ServiceItem, index: number) => {
     const t = service.title.toLowerCase();
@@ -180,6 +207,17 @@ export const NursingServicesGrid: React.FC<{
     [serviceLocations]
   );
 
+  const routerLocation = useLocation();
+
+  useEffect(() => {
+    if (!isServicePage || !routerLocation.hash) return;
+    const targetSlug = routerLocation.hash.replace('#', '');
+    const matched = activeDbServices.find((s) => s.slug === targetSlug);
+    if (matched) {
+      handleOpenServiceSummary(matched);
+    }
+  }, [isServicePage, routerLocation.hash, activeDbServices]);
+
   const selectedServiceLocations = useMemo(() => {
     if (!selectedService) return [];
     if (selectedService.locations && selectedService.locations.length > 0) {
@@ -188,82 +226,187 @@ export const NursingServicesGrid: React.FC<{
     return activeLocations;
   }, [selectedService, activeLocations]);
 
+  const updateScrollIndicators = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el || layout !== 'horizontal') {
+      setScrollState({ canScrollPrev: false, canScrollNext: false, hasOverflow: false });
+      return;
+    }
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const hasOverflow = maxScroll > 4;
+    const canScrollPrev = el.scrollLeft > 4;
+    const canScrollNext = el.scrollLeft < maxScroll - 4;
+    setScrollState({ canScrollPrev, canScrollNext, hasOverflow });
+  }, [layout]);
+
+  useEffect(() => {
+    if (layout !== 'horizontal') return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    updateScrollIndicators();
+
+    const handleScroll = () => updateScrollIndicators();
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && e.deltaY !== 0) {
+        const maxScroll = el.scrollWidth - el.clientWidth;
+        if (maxScroll <= 4) return;
+        const movingRight = e.deltaY > 0;
+        const canMove = movingRight ? el.scrollLeft < maxScroll - 2 : el.scrollLeft > 2;
+        if (canMove) {
+          e.preventDefault();
+          el.scrollBy({ left: e.deltaY, behavior: 'auto' });
+        }
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('resize', updateScrollIndicators);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => updateScrollIndicators());
+      resizeObserver.observe(el);
+    }
+
+    return () => {
+      el.removeEventListener('scroll', handleScroll);
+      el.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('resize', updateScrollIndicators);
+      resizeObserver?.disconnect();
+    };
+  }, [layout, activeDbServices.length, updateScrollIndicators]);
+
+  const handleScrollByStep = (direction: -1 | 1) => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const firstCard = el.firstElementChild as HTMLElement | null;
+    const cardWidth = firstCard ? firstCard.getBoundingClientRect().width : 300;
+    const gapPx = window.innerWidth >= 640 ? 24 : 20;
+    el.scrollBy({ left: direction * (cardWidth + gapPx), behavior: 'smooth' });
+  };
+
+  const renderServiceCard = (service: ServiceItem, idx: number, isHorizontal: boolean) => (
+    <div
+      key={service.id}
+      className={`bg-white rounded-3xl border border-[#e3ebef] overflow-hidden shadow-2xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between group ${
+        isHorizontal
+          ? 'flex-none snap-start w-[84%] sm:w-[calc((100%-24px)/2)] lg:w-[calc((100%-48px)/3)] xl:w-[calc((100%-72px)/4)]'
+          : ''
+      }`}
+    >
+      {/* Clickable Image + Text Region -> Opens Summary Modal */}
+      <button
+        type="button"
+        onClick={() => handleOpenServiceSummary(service)}
+        className="text-left w-full flex-1 flex flex-col cursor-pointer focus-visible:outline-2 focus-visible:outline-[#079b9a] focus-visible:outline-offset-[-2px]"
+        aria-label={`View summary for ${service.title}`}
+      >
+        {/* Top Mint Illustration Block */}
+        <div className="h-40 sm:h-44 w-full bg-[#e6f4f3] flex items-center justify-center p-5 relative overflow-hidden">
+          <div className="transition-transform duration-300 group-hover:scale-105">
+            {getIllustrationForService(service, idx)}
+          </div>
+          <span className="absolute bottom-2.5 right-3 text-[11px] font-semibold text-[#087e83] bg-white/90 px-2.5 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            Quick Summary
+          </span>
+        </div>
+
+        {/* Bottom Content Area */}
+        <div className="p-5 pb-3 flex-1">
+          <h3 className="font-bold text-[#102d4b] text-[17px] sm:text-[18px] leading-snug mb-1.5 group-hover:text-[#079b9a] transition-colors">
+            {service.title}
+          </h3>
+          <p className="text-slate-500 text-[13px] sm:text-[14px] leading-relaxed line-clamp-3">
+            {service.shortDescription}
+          </p>
+        </div>
+      </button>
+
+      {/* Action Footer: Summary + Enquiry Now */}
+      <div className="px-5 pb-5 pt-2 flex items-center justify-between gap-2 border-t border-slate-100/80 mt-2">
+        <Link
+          to={`/enquiry?service=${service.id}`}
+          className="inline-flex items-center gap-1.5 text-[14px] font-bold text-[#079b9a] hover:text-[#087e83] transition-colors cursor-pointer whitespace-nowrap shrink-0"
+        >
+          <span>Enquiry Now</span>
+          <span aria-hidden="true" className="text-base leading-none">→</span>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => handleOpenServiceSummary(service)}
+          className="text-xs font-semibold text-slate-500 hover:text-[#102d4b] transition-colors cursor-pointer whitespace-nowrap shrink-0"
+        >
+          View Summary
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <section className="py-6 sm:py-7 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-7">
-        {/* Header */}
-        <div className="text-left mb-6">
-          <div className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-[#079b9a] mb-1.5 font-mono">
-            WHAT WE OFFER
+        {/* Header with optional Horizontal Scroll Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+          <div className="text-left">
+            <div className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-[#079b9a] mb-1.5 font-mono">
+              WHAT WE OFFER
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-[38px] font-bold text-[#102d4b] tracking-tight leading-tight">
+              Our Nursing Services
+            </h2>
+            <p className="text-slate-500 text-sm sm:text-base mt-1.5 max-w-2xl leading-relaxed">
+              A wide range of professional care services, tailored to your needs. Click any service card to view a quick summary.
+            </p>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-[38px] font-bold text-[#102d4b] tracking-tight leading-tight">
-            Our Nursing Services
-          </h2>
-          <p className="text-slate-500 text-sm sm:text-base mt-1.5 max-w-2xl leading-relaxed">
-            A wide range of professional care services, tailored to your needs. Click any service card to view a quick summary.
-          </p>
+
+          {layout === 'horizontal' && scrollState.hasOverflow && (
+            <div className="flex items-center gap-3 shrink-0 self-start sm:self-end">
+              <span className="text-xs font-medium text-slate-500 whitespace-nowrap tabular-nums">
+                {activeDbServices.length} Services · Scroll to explore
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleScrollByStep(-1)}
+                  disabled={!scrollState.canScrollPrev}
+                  aria-label="Scroll services left"
+                  className="w-10 h-10 rounded-full border border-slate-200 bg-white text-[#102d4b] flex items-center justify-center shadow-2xs hover:border-[#079b9a] hover:text-[#079b9a] disabled:opacity-35 disabled:hover:border-slate-200 disabled:hover:text-[#102d4b] disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-[#079b9a]"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleScrollByStep(1)}
+                  disabled={!scrollState.canScrollNext}
+                  aria-label="Scroll services right"
+                  className="w-10 h-10 rounded-full border border-slate-200 bg-white text-[#102d4b] flex items-center justify-center shadow-2xs hover:border-[#079b9a] hover:text-[#079b9a] disabled:opacity-35 disabled:hover:border-slate-200 disabled:hover:text-[#102d4b] disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0 focus-visible:outline-2 focus-visible:outline-[#079b9a]"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Dynamic Responsive Grid displaying ALL active services (including newly added ones) */}
+        {/* Services Showcase: Single Scrollable Row (Home) or Multi-Row Grid (Services Page) */}
         {activeDbServices.length === 0 ? (
           <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center text-sm text-slate-500">
             No active nursing services configured yet.
           </div>
+        ) : layout === 'horizontal' ? (
+          <div
+            ref={scrollContainerRef}
+            className="flex flex-nowrap gap-5 sm:gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pt-1 pb-2 -mt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label="Nursing services list"
+          >
+            {activeDbServices.map((service, idx) => renderServiceCard(service, idx, true))}
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6">
-            {activeDbServices.map((service, idx) => (
-              <div
-                key={service.id}
-                className="bg-white rounded-3xl border border-[#e3ebef] overflow-hidden shadow-2xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between group"
-              >
-                {/* Clickable Image + Text Region -> Opens Summary Modal */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedService(service)}
-                  className="text-left w-full flex-1 flex flex-col cursor-pointer focus-visible:outline-2 focus-visible:outline-[#079b9a] focus-visible:outline-offset-[-2px]"
-                  aria-label={`View summary for ${service.title}`}
-                >
-                  {/* Top Mint Illustration Block */}
-                  <div className="h-40 sm:h-44 w-full bg-[#e6f4f3] flex items-center justify-center p-5 relative overflow-hidden">
-                    <div className="transition-transform duration-300 group-hover:scale-105">
-                      {getIllustrationForService(service, idx)}
-                    </div>
-                    <span className="absolute bottom-2.5 right-3 text-[11px] font-semibold text-[#087e83] bg-white/90 px-2.5 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                      Quick Summary
-                    </span>
-                  </div>
-
-                  {/* Bottom Content Area */}
-                  <div className="p-5 pb-3 flex-1">
-                    <h3 className="font-bold text-[#102d4b] text-[17px] sm:text-[18px] leading-snug mb-1.5 group-hover:text-[#079b9a] transition-colors">
-                      {service.title}
-                    </h3>
-                    <p className="text-slate-500 text-[13px] sm:text-[14px] leading-relaxed line-clamp-3">
-                      {service.shortDescription}
-                    </p>
-                  </div>
-                </button>
-
-                {/* Action Footer: Summary + Enquiry Now */}
-                <div className="px-5 pb-5 pt-2 flex items-center justify-between gap-2 border-t border-slate-100/80 mt-2">
-                  <Link
-                    to={`/enquiry?service=${service.id}`}
-                    className="inline-flex items-center gap-1.5 text-[14px] font-bold text-[#079b9a] hover:text-[#087e83] transition-colors cursor-pointer whitespace-nowrap"
-                  >
-                    <span>Enquiry Now</span>
-                    <span aria-hidden="true" className="text-base leading-none">→</span>
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedService(service)}
-                    className="text-xs font-semibold text-slate-500 hover:text-[#102d4b] transition-colors cursor-pointer whitespace-nowrap"
-                  >
-                    View Summary
-                  </button>
-                </div>
-              </div>
-            ))}
+            {activeDbServices.map((service, idx) => renderServiceCard(service, idx, false))}
           </div>
         )}
 
@@ -390,6 +533,47 @@ export const NursingServicesGrid: React.FC<{
                 </div>
               )}
 
+              {selectedService.faqs && selectedService.faqs.length > 0 && (
+                <div className="space-y-2.5">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <HelpCircle className="w-3.5 h-3.5 text-[#079b9a]" />
+                    <span>Frequently Asked Questions ({selectedService.faqs.length})</span>
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedService.faqs.map((faq, fIdx) => {
+                      const isOpen = openModalFaqIndex === fIdx;
+                      return (
+                        <div
+                          key={fIdx}
+                          className="border border-slate-200 rounded-xl overflow-hidden bg-white"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setOpenModalFaqIndex(isOpen ? null : fIdx)}
+                            aria-expanded={isOpen}
+                            className="w-full px-4 py-3 text-left flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
+                          >
+                            <span className="text-xs font-semibold text-[#102d4b] leading-snug">
+                              {faq.question}
+                            </span>
+                            <ChevronDown
+                              className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-150 ${
+                                isOpen ? 'rotate-180 text-[#079b9a]' : ''
+                              }`}
+                            />
+                          </button>
+                          {isOpen && (
+                            <div className="px-4 pb-3 pt-1 text-xs text-slate-600 leading-relaxed border-t border-slate-100 bg-[#effaf8]/40">
+                              {faq.answer}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="p-3 bg-emerald-50/60 border border-emerald-200/70 rounded-xl flex items-center gap-2.5 text-xs text-emerald-900">
                 <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
                 <span>All visits follow hospital-grade aseptic protocols with Nursing Council verified professionals.</span>
@@ -399,18 +583,18 @@ export const NursingServicesGrid: React.FC<{
             {/* Fixed Footer */}
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
               <Link
-                to={`/services#${selectedService.slug}`}
+                to="/contact-us"
                 onClick={() => setSelectedService(null)}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors whitespace-nowrap shrink-0"
               >
-                <span>View Full Details & FAQs</span>
+                <span>Ask a Coordinator</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
 
               <Link
                 to={`/enquiry?service=${selectedService.id}`}
                 onClick={() => setSelectedService(null)}
-                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#079b9a] hover:bg-[#087e83] text-white text-xs font-bold rounded-xl shadow-sm transition-colors whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#079b9a] hover:bg-[#087e83] text-white text-xs font-bold rounded-xl shadow-sm transition-colors whitespace-nowrap shrink-0"
               >
                 <span>Enquiry / Book This Service</span>
                 <ArrowRight className="w-4 h-4" />

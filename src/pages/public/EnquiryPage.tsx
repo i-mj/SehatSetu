@@ -218,22 +218,22 @@ export const EnquiryPage: React.FC = () => {
       />
 
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/20 to-white pt-7 pb-6 border-b border-slate-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold mb-3">
+      <section className="bg-gradient-to-b from-[#effaf8]/70 via-[#effaf8]/20 to-white pt-6 pb-5 border-b border-slate-100">
+        <div className="w-full px-4 sm:px-6 lg:px-7 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100/70 text-[#0e6b5c] text-xs font-semibold mb-2.5">
             <FileCheck2 className="w-3.5 h-3.5 text-[#0f8672]" />
             <span>Official Clinical Booking</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
             Book a Trained Nurse for Care at Home
           </h1>
-          <p className="mt-3 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-3xl mx-auto">
             Fill in the patient’s clinical requirements below. Our duty coordinator reviews doctor recommendations and reaches out within 30 minutes.
           </p>
         </div>
       </section>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-7 py-6 sm:py-7">
+      <div className="w-full px-4 sm:px-6 lg:px-7 py-5 sm:py-6">
         {isSubmittedSuccess ? (
           /* Thank You / Confirmation State */
           <div className="bg-[#effaf8] border border-teal-200/90 rounded-2xl p-6 sm:p-7 text-center space-y-6 shadow-sm animate-in fade-in zoom-in-95 duration-200">
@@ -253,38 +253,42 @@ export const EnquiryPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-5 bg-white rounded-xl border border-teal-100 max-w-md mx-auto text-left text-xs space-y-2 text-slate-700 shadow-2xs">
-              <div className="flex justify-between pb-1.5 border-b border-slate-100">
-                <span className="text-slate-500">Patient / Contact:</span>
-                <span className="font-semibold text-slate-900">{fullName}</span>
-              </div>
-              <div className="flex justify-between pb-1.5 border-b border-slate-100">
-                <span className="text-slate-500">Selected Service:</span>
-                <span className="font-semibold text-slate-900">
-                  {services.find((s) => s.id === serviceId)?.title || 'Home Nursing'}
-                </span>
-              </div>
-              <div className="flex justify-between pb-1.5 border-b border-slate-100">
-                <span className="text-slate-500">Coverage Location:</span>
-                <span className="font-semibold text-slate-900">{cityArea}</span>
-              </div>
-              <div className="flex justify-between pb-1.5 border-b border-slate-100">
-                <span className="text-slate-500">Preferred Start Date:</span>
-                <span className="font-semibold text-slate-900">{preferredDate || 'Earliest available'}</span>
+            <div className="p-5 bg-white rounded-xl border border-teal-100 max-w-3xl mx-auto text-left text-xs text-slate-700 shadow-2xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+                <div className="flex justify-between pb-1.5 border-b border-slate-100">
+                  <span className="text-slate-500">Patient / Contact:</span>
+                  <span className="font-semibold text-slate-900">{fullName}</span>
+                </div>
+                <div className="flex justify-between pb-1.5 border-b border-slate-100">
+                  <span className="text-slate-500">Selected Service:</span>
+                  <span className="font-semibold text-slate-900">
+                    {services.find((s) => s.id === serviceId)?.title || 'Home Nursing'}
+                  </span>
+                </div>
+                <div className="flex justify-between pb-1.5 border-b border-slate-100">
+                  <span className="text-slate-500">Coverage Location:</span>
+                  <span className="font-semibold text-slate-900">{cityArea}</span>
+                </div>
+                <div className="flex justify-between pb-1.5 border-b border-slate-100">
+                  <span className="text-slate-500">Preferred Start Date:</span>
+                  <span className="font-semibold text-slate-900">{preferredDate || 'Earliest available'}</span>
+                </div>
               </div>
 
               {/* Submitted Custom Fields */}
               {Object.keys(customValues).length > 0 && (
-                <div className="pt-1.5 space-y-1">
+                <div className="pt-3 mt-2 border-t border-slate-100 space-y-1.5">
                   <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
                     Additional Details Provided
                   </span>
-                  {Object.entries(customValues).map(([key, val]) => (
-                    <div key={key} className="flex justify-between text-[11px]">
-                      <span className="text-slate-500 capitalize">{key.replace(/_/g, ' ')}:</span>
-                      <span className="font-semibold text-slate-900">{val}</span>
-                    </div>
-                  ))}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                    {Object.entries(customValues).map(([key, val]) => (
+                      <div key={key} className="flex justify-between text-[11px]">
+                        <span className="text-slate-500 capitalize">{key.replace(/_/g, ' ')}:</span>
+                        <span className="font-semibold text-slate-900">{val}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -307,8 +311,8 @@ export const EnquiryPage: React.FC = () => {
           </div>
         ) : (
           /* Enquiry Form */
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-7 shadow-sm">
-            <form onSubmit={handleSubmit} noValidate className="space-y-6">
+          <div className="w-full bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 lg:p-7 shadow-sm">
+            <form onSubmit={handleSubmit} noValidate className="space-y-5">
               {/* Honeypot field (hidden from accessibility tree & visual rendering) */}
               <div className="hidden" aria-hidden="true">
                 <label htmlFor="website_source">Leave this blank</label>
@@ -322,7 +326,7 @@ export const EnquiryPage: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {/* Full Name */}
                 {fnConfig?.enabled !== false && (
                   <div>
@@ -487,7 +491,13 @@ export const EnquiryPage: React.FC = () => {
 
                 {/* City / Area */}
                 {ctConfig?.enabled !== false && (
-                  <div>
+                  <div
+                    className={
+                      dtConfig?.enabled === false && activeCustomFields.length === 0
+                        ? 'lg:col-span-2'
+                        : ''
+                    }
+                  >
                     <label
                       htmlFor="cityArea"
                       className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5"
@@ -591,7 +601,7 @@ export const EnquiryPage: React.FC = () => {
 
                 {/* Custom Fields configured by Administrator */}
                 {activeCustomFields.map((cf) => (
-                  <div key={cf.id} className={cf.type === 'textarea' ? 'sm:col-span-2' : ''}>
+                  <div key={cf.id} className={cf.type === 'textarea' ? 'sm:col-span-2 lg:col-span-3' : ''}>
                     <label
                       htmlFor={`custom_${cf.name}`}
                       className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5"
@@ -671,7 +681,7 @@ export const EnquiryPage: React.FC = () => {
                   <div className="relative">
                     <textarea
                       id="message"
-                      rows={4}
+                      rows={3}
                       required={mgConfig?.required}
                       placeholder={mgConfig?.placeholder || 'Describe patient age, diagnosis, mobility level, shift preferences, or ongoing doctor prescriptions...'}
                       value={message}
@@ -693,19 +703,20 @@ export const EnquiryPage: React.FC = () => {
                       <span>{errors.message}</span>
                     </p>
                   )}
-                  <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                    <span>Confidential. Prescriptions and medical histories are shared strictly with assigned clinical staff.</span>
-                  </p>
                 </div>
               )}
 
-              {/* Submit Button */}
-              <div className="pt-2">
+              {/* Bottom Bar: Confidentiality Assurance + Submit Button */}
+              <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span>Confidential. Prescriptions and medical histories are shared strictly with assigned clinical staff.</span>
+                </p>
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full sm:w-auto px-7 py-3.5 bg-[#0f8672] hover:bg-[#0e6b5c] disabled:bg-slate-300 text-white font-semibold text-sm rounded-xl shadow-md transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-auto px-7 py-3 bg-[#0f8672] hover:bg-[#0e6b5c] disabled:bg-slate-300 text-white font-semibold text-sm rounded-xl shadow-md transition-all duration-150 flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap shrink-0"
                 >
                   {isSubmitting ? (
                     <>
