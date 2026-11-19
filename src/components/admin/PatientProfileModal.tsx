@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   X,
   User,
@@ -19,12 +20,18 @@ import {
   ExternalLink,
   Printer,
   CreditCard,
-  Plus
+  Plus,
+  ArrowRight
 } from 'lucide-react';
 import { Enquiry, Nurse, ServiceItem, Document, CareBilling } from '../../types';
 import { DocumentViewerModal } from '../common/DocumentViewerModal';
 import { InvoiceStatementModal } from './InvoiceStatementModal';
 import { useApp } from '../../context/AppContext';
+import {
+  getBillingsForEnquiry,
+  getEnquiryBillingBadge,
+  isPendingDraftBilling
+} from '../../utils/billingHelpers';
 
 interface PatientProfileModalProps {
   enquiry: Enquiry | null;
@@ -45,26 +52,23 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
   onSelectForBilling,
   isBillingContext = false
 }) => {
-  const { billings: contextBillings } = useApp();
+  const { billings: contextBillings, currentAdminUser } = useApp();
   const allBillings = propBillings || contextBillings || [];
+  const canAccessFinances = currentAdminUser?.role !== 'STAFF';
 
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<Document | null>(null);
   const [selectedBillingForInvoice, setSelectedBillingForInvoice] = useState<CareBilling | null>(null);
 
   // Match all invoices / bills belonging to this specific patient
-  const patientBillings = useMemo(() => {
-    if (!enquiry) return [];
-    return allBillings.filter((b) => {
-      const matchId = b.enquiryId === enquiry.id;
-      const cleanEnquiryPhone = enquiry.phone ? enquiry.phone.replace(/[^0-9]/g, '') : '';
-      const cleanBillPhone = b.phone ? b.phone.replace(/[^0-9]/g, '') : '';
-      const matchPhone = cleanEnquiryPhone.length >= 8 && cleanBillPhone.length >= 8 && (
-        cleanEnquiryPhone.includes(cleanBillPhone) || cleanBillPhone.includes(cleanEnquiryPhone)
-      );
-      const matchName = b.patientName && enquiry.fullName && b.patientName.trim().toLowerCase() === enquiry.fullName.trim().toLowerCase();
-      return matchId || matchPhone || matchName;
-    });
-  }, [enquiry, allBillings]);
+  const patientBillings = useMemo(
+    () => getBillingsForEnquiry(enquiry, allBillings),
+    [enquiry, allBillings]
+  );
+
+  const billingBadge = useMemo(
+    () => getEnquiryBillingBadge(patientBillings),
+    [patientBillings]
+  );
 
   const totalBilled = patientBillings.reduce((sum, b) => sum + (b.totalCharges || 0), 0);
   const totalPaid = patientBillings.reduce((sum, b) => sum + (b.amountPaid || 0), 0);
@@ -130,14 +134,20 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                   {enquiry.fullName.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-xl font-bold text-white tracking-tight">
                       {enquiry.fullName}
                     </h2>
                     <span
-                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border bg-white/20 text-white border-white/30`}
+                      className="text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border bg-white/20 text-white border-white/30"
                     >
                       {enquiry.stage}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${billingBadge.headerDarkBadgeClass}`}
+                    >
+                      <Receipt className="w-3 h-3 shrink-0" />
+                      <span>{billingBadge.label}</span>
                     </span>
                   </div>
                   <p className="text-xs text-teal-100 flex items-center gap-2 mt-1">
@@ -148,20 +158,34 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                 </div>
               </div>
 
-              {/* Action: Select for bill */}
-              {onSelectForBilling && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelectForBilling(enquiry);
-                    onClose();
-                  }}
-                  className="px-4 py-2 bg-white text-[#0f8672] hover:bg-teal-50 font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Receipt className="w-4 h-4 text-[#0f8672]" />
-                  <span>{isBillingContext ? 'Use for Billing' : 'Create Bill for Patient'}</span>
-                </button>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {canAccessFinances && billingBadge.hasBilling && (
+                  <Link
+                    to={`/admin/finances?enquiryId=${encodeURIComponent(enquiry.id)}`}
+                    onClick={onClose}
+                    className="px-3.5 py-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-bold text-xs rounded-xl transition-all inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                  >
+                    <Receipt className="w-3.5 h-3.5 shrink-0" />
+                    <span>Go to Finances</span>
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                  </Link>
+                )}
+
+                {/* Action: Select for bill */}
+                {onSelectForBilling && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectForBilling(enquiry);
+                      onClose();
+                    }}
+                    className="px-4 py-2 bg-white text-[#0f8672] hover:bg-teal-50 font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+                  >
+                    <Receipt className="w-4 h-4 text-[#0f8672]" />
+                    <span>{isBillingContext ? 'Use for Billing' : 'Create Bill for Patient'}</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -368,10 +392,11 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                   {/* Invoices List */}
                   <div className="space-y-2.5">
                     {patientBillings.map((bill) => {
+                      const isDraft = isPendingDraftBilling(bill);
                       const billPercentPaid =
                         bill.totalCharges > 0
                           ? Math.min(100, Math.round((bill.amountPaid / bill.totalCharges) * 100))
-                          : 100;
+                          : 0;
 
                       return (
                         <div
@@ -385,7 +410,9 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                               </span>
                               <span
                                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
-                                  bill.status === 'COMPLETED'
+                                  isDraft
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                    : bill.status === 'COMPLETED'
                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                     : bill.status === 'REFUNDED'
                                     ? 'bg-rose-50 text-rose-700 border-rose-200'
@@ -394,7 +421,9 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                                     : 'bg-teal-50 text-[#0e6b5c] border-teal-200'
                                 }`}
                               >
-                                {bill.status === 'COMPLETED'
+                                {isDraft
+                                  ? 'Pending Rate Setup'
+                                  : bill.status === 'COMPLETED'
                                   ? 'Paid in Full'
                                   : bill.balanceDue > 0
                                   ? `Due: ₹${bill.balanceDue.toLocaleString('en-IN')}`

@@ -707,6 +707,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const assignNurseToEnquiry = (enquiryId: string, nurseId: string | null) => {
     const nowIso = new Date().toISOString();
+    const targetEnq = enquiries.find((item) => item.id === enquiryId);
+    const assignedNurseObj = nurseId ? nurses.find((n) => n.id === nurseId) : null;
+
     setEnquiries((prev) =>
       prev.map((item) => {
         if (item.id !== enquiryId) return item;
@@ -747,9 +750,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
-    const targetEnq = enquiries.find((item) => item.id === enquiryId);
-    const assignedNurseObj = nurseId ? nurses.find((n) => n.id === nurseId) : null;
     if (nurseId) {
+      let autoCreatedBillId: string | null = null;
+
+      if (targetEnq) {
+        const hasExistingBilling = billings.some((b) => b.enquiryId === enquiryId);
+        if (!hasExistingBilling) {
+          const billId = 'bill-' + Date.now();
+          const startDate = targetEnq.preferredDate || nowIso.split('T')[0];
+          const matchedService = services.find((s) => s.id === targetEnq.serviceId);
+          const serviceName = matchedService?.title || targetEnq.serviceId || 'Home Nursing Care';
+
+          const draftBill: CareBilling = {
+            id: billId,
+            enquiryId: targetEnq.id,
+            patientName: targetEnq.fullName,
+            phone: targetEnq.phone,
+            serviceName,
+            startDate,
+            endDate: startDate,
+            totalDays: 0,
+            shiftType: 'Pending Rate Setup',
+            dailyRate: 0,
+            baseCareCharges: 0,
+            consumablesCharges: 0,
+            taxes: 0,
+            totalCharges: 0,
+            amountPaid: 0,
+            balanceDue: 0,
+            payments: [],
+            refunds: [],
+            totalRefunded: 0,
+            extensions: [],
+            status: 'ACTIVE',
+            notes: `Auto-created pending draft upon assigning ${assignedNurseObj?.fullName || 'nurse'}. Awaiting Finance duration & rate configuration.`,
+            createdAt: nowIso,
+            updatedAt: nowIso
+          };
+
+          setBillings((prev) => {
+            if (prev.some((b) => b.enquiryId === enquiryId)) return prev;
+            return [draftBill, ...prev];
+          });
+
+          autoCreatedBillId = billId;
+          recordActivity({
+            action: 'Auto-Created Draft Billing',
+            category: 'FINANCE',
+            targetType: 'CareBilling',
+            targetId: billId,
+            details: `Auto-generated pending draft billing #${billId} (₹0 — awaiting Finance rate setup) for ${targetEnq.fullName} upon nurse assignment.`
+          });
+        }
+      }
+
       recordActivity({
         action: 'Assigned Nurse to Enquiry',
         category: 'ENQUIRY',
@@ -757,7 +811,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         targetId: enquiryId,
         details: `Assigned ${assignedNurseObj?.fullName || nurseId} to ${targetEnq?.fullName || enquiryId} (Stage set to CONFIRMED).`
       });
-      addToast('Nurse Assigned', 'Stage automatically set to CONFIRMED.', 'success');
+
+      addToast(
+        'Nurse Assigned & Confirmed',
+        autoCreatedBillId
+          ? `Stage set to CONFIRMED and pending draft billing (#${autoCreatedBillId}) created in Finances.`
+          : 'Stage automatically set to CONFIRMED.',
+        'success'
+      );
     } else {
       recordActivity({
         action: 'Unassigned Nurse from Enquiry',

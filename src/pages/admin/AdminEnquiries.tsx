@@ -39,17 +39,21 @@ import {
   CheckSquare,
   Square,
   MinusSquare,
-  ChevronDown
+  ChevronDown,
+  Receipt
 } from 'lucide-react';
 import { GoogleSheetsSyncModal } from '../../components/admin/GoogleSheetsSyncModal';
 import { DocumentViewerModal } from '../../components/common/DocumentViewerModal';
 import { exportToCSV } from '../../utils/exportUtils';
+import { getBillingsForEnquiry, getEnquiryBillingBadge } from '../../utils/billingHelpers';
 
 export const AdminEnquiries: React.FC = () => {
   const {
     enquiries,
     nurses,
     services,
+    billings,
+    currentAdminUser,
     updateEnquiry,
     updateEnquiryStage,
     assignNurseToEnquiry,
@@ -61,6 +65,8 @@ export const AdminEnquiries: React.FC = () => {
     deleteDocumentFromEnquiry,
     addToast
   } = useApp();
+
+  const canAccessFinances = currentAdminUser?.role !== 'STAFF';
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -999,7 +1005,16 @@ export const AdminEnquiries: React.FC = () => {
       </div>
 
       {/* DETAIL VIEW DRAWER / MODAL */}
-      {activeEnquiry && (
+      {activeEnquiry && (() => {
+        const activeEnquiryBillings = getBillingsForEnquiry(activeEnquiry, billings);
+        const billingBadge = getEnquiryBillingBadge(activeEnquiryBillings);
+        const primaryBilling =
+          activeEnquiryBillings.find((b) => b.status === 'ACTIVE') || activeEnquiryBillings[0] || null;
+        const enquiryTotalCharges = activeEnquiryBillings.reduce((sum, b) => sum + (b.totalCharges || 0), 0);
+        const enquiryTotalPaid = activeEnquiryBillings.reduce((sum, b) => sum + (b.amountPaid || 0), 0);
+        const enquiryTotalDue = activeEnquiryBillings.reduce((sum, b) => sum + (b.balanceDue || 0), 0);
+
+        return (
         <div
           className="fixed inset-0 z-50 overflow-hidden bg-black/60 flex justify-end"
           role="dialog"
@@ -1007,9 +1022,9 @@ export const AdminEnquiries: React.FC = () => {
         >
           <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col overflow-y-auto animate-in slide-in-from-right duration-200">
             {/* Drawer Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <div>
-                <div className="flex items-center gap-2">
+            <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-3 sticky top-0 bg-white z-10">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-mono font-bold text-slate-400">
                     #{activeEnquiry.id}
                   </span>
@@ -1020,22 +1035,41 @@ export const AdminEnquiries: React.FC = () => {
                   >
                     {activeEnquiry.stage}
                   </span>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${billingBadge.badgeClass}`}
+                  >
+                    <Receipt className="w-3 h-3 shrink-0" />
+                    <span>{billingBadge.label}</span>
+                  </span>
                 </div>
-                <h2 className="text-lg font-bold text-slate-900 mt-0.5">
+                <h2 className="text-lg font-bold text-slate-900 mt-0.5 truncate">
                   {activeEnquiry.fullName}
                 </h2>
               </div>
-              <button
-                onClick={() => setViewEnquiryId(null)}
-                className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
-                aria-label="Close drawer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {canAccessFinances && billingBadge.hasBilling && (
+                  <Link
+                    to={`/admin/finances?enquiryId=${encodeURIComponent(activeEnquiry.id)}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0f8672] hover:bg-[#0e6b5c] text-white text-xs font-semibold rounded-xl shadow-2xs transition-colors whitespace-nowrap shrink-0"
+                    title="Open this patient's billing record in Finances"
+                  >
+                    <Receipt className="w-3.5 h-3.5 shrink-0" />
+                    <span>Go to Finances</span>
+                    <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                  </Link>
+                )}
+                <button
+                  onClick={() => setViewEnquiryId(null)}
+                  className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                  aria-label="Close drawer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Drawer Body */}
-            <div className="p-6 space-y-8 flex-1">
+            <div className="p-6 space-y-6 flex-1">
               {/* Stage Selector */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -1117,7 +1151,7 @@ export const AdminEnquiries: React.FC = () => {
                   );
                 })() : (
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Search and select an active registered nurse to handle this patient. Assigning an active nurse advances stage to <strong>CONFIRMED</strong>.
+                    Search and select an active registered nurse to handle this patient. Assigning an active nurse advances stage to <strong>CONFIRMED</strong> and automatically creates a pending draft billing record in Finances.
                   </p>
                 )}
 
@@ -1192,6 +1226,68 @@ export const AdminEnquiries: React.FC = () => {
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Patient Billing & Finances Status Card */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-[#0f8672]" />
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Patient Billing & Finances
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${billingBadge.badgeClass}`}
+                    >
+                      {billingBadge.label}
+                    </span>
+                  </div>
+
+                  {canAccessFinances && billingBadge.hasBilling && (
+                    <Link
+                      to={`/admin/finances?enquiryId=${encodeURIComponent(activeEnquiry.id)}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-teal-50 text-[#0f8672] border border-teal-200 text-xs font-semibold rounded-xl shadow-2xs transition-colors whitespace-nowrap shrink-0"
+                    >
+                      <Receipt className="w-3.5 h-3.5 shrink-0" />
+                      <span>Go to Finances</span>
+                      <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                    </Link>
+                  )}
+                </div>
+
+                {billingBadge.hasBilling ? (
+                  billingBadge.isPendingDraft ? (
+                    <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-900 space-y-1">
+                      <div className="font-semibold">
+                        Pending Draft Generated ({primaryBilling ? `#${primaryBilling.id}` : 'Draft'})
+                      </div>
+                      <p className="text-[11px] text-amber-800/90 leading-relaxed">
+                        Billing record was created with ₹0 charges upon nurse assignment. Open Finances to configure care duration, daily rate, and advance payment.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs tabular-nums">
+                      <div className="p-2.5 bg-white border border-slate-200 rounded-xl">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Total Billed</span>
+                        <span className="font-bold text-slate-900">₹{enquiryTotalCharges.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="p-2.5 bg-white border border-slate-200 rounded-xl">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Paid</span>
+                        <span className="font-bold text-emerald-700">₹{enquiryTotalPaid.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="p-2.5 bg-white border border-slate-200 rounded-xl">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Balance Due</span>
+                        <span className={`font-bold ${enquiryTotalDue > 0 ? 'text-amber-700' : 'text-slate-500'}`}>
+                          ₹{enquiryTotalDue.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    No billing record has been generated yet. Assign a registered nurse above to confirm this enquiry and automatically generate a pending draft in Finances.
+                  </p>
+                )}
               </div>
 
               {/* Patient Fields Grid */}
@@ -1452,7 +1548,8 @@ export const AdminEnquiries: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* EDIT ENQUIRY MODAL */}
       {editingEnquiry && (

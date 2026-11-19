@@ -12,6 +12,7 @@ import { PageSeo } from '../../components/common/PageSeo';
 import { CareBilling, PaymentMode, BillingStatus, Enquiry } from '../../types';
 import { PatientProfileModal } from '../../components/admin/PatientProfileModal';
 import { InvoiceStatementModal } from '../../components/admin/InvoiceStatementModal';
+import { getBillingsForEnquiry, isPendingDraftBilling } from '../../utils/billingHelpers';
 import {
   DollarSign,
   Plus,
@@ -112,16 +113,38 @@ export const AdminFinances: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | BillingStatus>('ALL');
 
   // View Mode: 'both' (Charts + Invoices), 'charts' (Only Visuals), 'table' (Only Invoices), 'refunds' (Refunds Ledger)
-  const initialView = searchParams.get('view') === 'refunds' ? 'refunds' : 'both';
+  const filterEnquiryId = searchParams.get('enquiryId') || '';
+  const initialView =
+    searchParams.get('view') === 'refunds'
+      ? 'refunds'
+      : filterEnquiryId
+      ? 'table'
+      : 'both';
   const [viewMode, setViewMode] = useState<'both' | 'charts' | 'table' | 'refunds'>(initialView);
   const [timeRange, setTimeRange] = useState<'6m' | '12m'>('6m');
 
   useEffect(() => {
     const viewParam = searchParams.get('view');
+    const enqParam = searchParams.get('enquiryId');
     if (viewParam === 'refunds') {
       setViewMode('refunds');
+    } else if (enqParam) {
+      setViewMode('table');
+      setStatusFilter('ALL');
     }
   }, [searchParams]);
+
+  const filteredPatientEnquiry = useMemo(() => {
+    if (!filterEnquiryId) return null;
+    return enquiries.find((e) => e.id === filterEnquiryId) || null;
+  }, [enquiries, filterEnquiryId]);
+
+  const clearPatientFilter = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('enquiryId');
+    setSearchParams(nextParams);
+    setViewMode('both');
+  };
 
   // Patient Search & Profile modal states
   const [patientSearchTerm, setPatientSearchTerm] = useState('');
@@ -185,7 +208,13 @@ export const AdminFinances: React.FC = () => {
 
   // Filtered billings
   const filteredBillings = useMemo(() => {
-    return billings.filter((b) => {
+    const baseBillings = filterEnquiryId
+      ? filteredPatientEnquiry
+        ? getBillingsForEnquiry(filteredPatientEnquiry, billings)
+        : billings.filter((b) => b.enquiryId === filterEnquiryId)
+      : billings;
+
+    return baseBillings.filter((b) => {
       const matchesSearch =
         b.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         b.phone.includes(searchQuery) ||
@@ -194,7 +223,7 @@ export const AdminFinances: React.FC = () => {
       const matchesStatus = statusFilter === 'ALL' || b.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [billings, searchQuery, statusFilter]);
+  }, [billings, filterEnquiryId, filteredPatientEnquiry, searchQuery, statusFilter]);
 
   // Flattened Refund Records for the Admin Refunds Ledger
   const allRefundRecords = useMemo(() => {
@@ -422,7 +451,9 @@ export const AdminFinances: React.FC = () => {
     setEditEndDate(b.endDate);
     setEditDays(b.totalDays);
     setEditDailyRate(b.dailyRate);
-    setEditShiftType(b.shiftType);
+    setEditShiftType(
+      b.shiftType === 'Pending Rate Setup' ? '12h Day Shift (8 AM - 8 PM)' : b.shiftType
+    );
     setEditNotes(b.notes || '');
   };
 
@@ -1130,6 +1161,48 @@ export const AdminFinances: React.FC = () => {
       {/* ========================================================================= */}
       {(viewMode === 'both' || viewMode === 'table') && (
         <div className="space-y-4">
+          {filterEnquiryId && (
+            <div className="p-3.5 bg-teal-50/80 border border-teal-200 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 text-xs text-teal-950">
+                <div className="w-8 h-8 rounded-xl bg-white border border-teal-200 text-[#0f8672] flex items-center justify-center shrink-0">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-bold">
+                    Showing billing records for{' '}
+                    <span className="text-[#0e6b5c]">
+                      {filteredPatientEnquiry?.fullName || `Enquiry #${filterEnquiryId}`}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-teal-800/80">
+                    Linked Enquiry <span className="font-mono font-semibold">#{filterEnquiryId}</span>
+                    {filteredPatientEnquiry?.phone ? ` · ${filteredPatientEnquiry.phone}` : ''}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {filteredPatientEnquiry && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPatientForProfile(filteredPatientEnquiry)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-teal-50 border border-teal-200 text-[#0f8672] text-xs font-semibold rounded-xl transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View Patient Profile</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={clearPatientFilter}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0f8672] hover:bg-[#0e6b5c] text-white text-xs font-semibold rounded-xl shadow-2xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Show All Billings</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Search and Filters */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="relative w-full lg:w-96">
@@ -1194,9 +1267,10 @@ export const AdminFinances: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredBillings.map((bill) => {
+                  const isDraft = isPendingDraftBilling(bill);
                   const percentPaid = bill.totalCharges > 0
                     ? Math.min(100, Math.round((bill.amountPaid / bill.totalCharges) * 100))
-                    : 100;
+                    : 0;
 
                   return (
                     <tr key={bill.id} className="hover:bg-slate-50/70 transition-colors">
@@ -1272,33 +1346,41 @@ export const AdminFinances: React.FC = () => {
 
                       {/* Collected / Due */}
                       <td className="py-4 px-4 align-top space-y-1.5 min-w-[155px] tabular-nums">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-emerald-700">
-                            Paid: ₹{bill.amountPaid.toLocaleString('en-IN')}
-                          </span>
-                          <span className="text-[10px] text-slate-400">{percentPaid}%</span>
-                        </div>
+                        {isDraft ? (
+                          <div className="p-2 bg-amber-50/70 border border-amber-200/80 rounded-lg text-[11px] text-amber-800 font-medium">
+                            Awaiting duration &amp; rate setup
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-emerald-700">
+                                Paid: ₹{bill.amountPaid.toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-[10px] text-slate-400">{percentPaid}%</span>
+                            </div>
 
-                        {/* Progress Bar */}
-                        <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${
-                              bill.balanceDue === 0 ? 'bg-emerald-500' : 'bg-teal-500'
-                            }`}
-                            style={{ width: `${percentPaid}%` }}
-                          />
-                        </div>
+                            {/* Progress Bar */}
+                            <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${
+                                  bill.balanceDue === 0 ? 'bg-emerald-500' : 'bg-teal-500'
+                                }`}
+                                style={{ width: `${percentPaid}%` }}
+                              />
+                            </div>
 
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-500">Due:</span>
-                          <span
-                            className={`font-bold ${
-                              bill.balanceDue > 0 ? 'text-amber-700' : 'text-slate-400'
-                            }`}
-                          >
-                            ₹{bill.balanceDue.toLocaleString('en-IN')}
-                          </span>
-                        </div>
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-slate-500">Due:</span>
+                              <span
+                                className={`font-bold ${
+                                  bill.balanceDue > 0 ? 'text-amber-700' : 'text-slate-400'
+                                }`}
+                              >
+                                ₹{bill.balanceDue.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          </>
+                        )}
 
                         {bill.totalRefunded > 0 && (
                           <div className="text-[10px] text-rose-600 font-semibold">
@@ -1311,7 +1393,9 @@ export const AdminFinances: React.FC = () => {
                       <td className="py-4 px-4 align-top">
                         <span
                           className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold border whitespace-nowrap ${
-                            bill.status === 'COMPLETED'
+                            isDraft
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : bill.status === 'COMPLETED'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : bill.status === 'REFUNDED'
                               ? 'bg-rose-50 text-rose-700 border-rose-200'
@@ -1320,7 +1404,7 @@ export const AdminFinances: React.FC = () => {
                               : 'bg-teal-50 text-[#0e6b5c] border-teal-200'
                           }`}
                         >
-                          {bill.status}
+                          {isDraft ? 'PENDING DRAFT' : bill.status}
                         </span>
                       </td>
 
@@ -1342,11 +1426,15 @@ export const AdminFinances: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => openEditDuration(bill)}
-                            className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-[11px] rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
+                            className={`px-2.5 py-1 font-semibold text-[11px] rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0 border ${
+                              isDraft
+                                ? 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-900'
+                                : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                            }`}
                             title="Edit care duration dates & rates"
                           >
-                            <Edit3 className="w-3 h-3 text-slate-500 shrink-0" />
-                            <span>Edit Duration</span>
+                            <Edit3 className={`w-3 h-3 shrink-0 ${isDraft ? 'text-amber-700' : 'text-slate-500'}`} />
+                            <span>{isDraft ? 'Set Rate & Duration' : 'Edit Duration'}</span>
                           </button>
 
                           {/* Extend Duration Button */}
